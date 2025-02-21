@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,41 +7,90 @@ import {
   ScrollView,
   Dimensions,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
 
 const HomeScreen = () => {
   const [currentDateIndex, setCurrentDateIndex] = useState(0);
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<ScrollView | null>(null);
+  const [monthDates, setMonthDates] = useState<string[]>([]);
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth()); // 0-11
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const dateScrollViewRef = useRef<ScrollView | null>(null);
 
-  const today = new Date();
+  useEffect(() => {
+    generateMonthDates(currentMonth, currentYear);
+  }, [currentMonth, currentYear]);
 
-  const weekDates = [];
-  let current = new Date();
-  const dayOfWeek = current.getDay();
-  current.setDate(current.getDate() - dayOfWeek);
+  const generateMonthDates = (month: number, year: number) => {
+    const firstDayOfMonth = new Date(year, month, 1);
+    const lastDayOfMonth = new Date(year, month + 1, 0);
+    const daysInMonth = lastDayOfMonth.getDate();
 
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(current);
-    weekDates.push(date);
-    current.setDate(current.getDate() + 1);
-  }
+    const dates = [];
+    for (let i = 1; i <= daysInMonth; i++) {
+      dates.push(new Date(year, month, i));
+    }
+    setMonthDates(dates.map(date => date.toISOString()));
+    setCurrentDateIndex(0);
+    setTimeout(() => {
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ x: 0, animated: false });
+      }
+    }, 0);
+  };
+
+  const triggerHaptic = () => {
+    //Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+   // Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
+    }
+  };
 
   const handleScroll = (event: { nativeEvent: { contentOffset: { x: any; }; }; }) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
     const index = Math.round(scrollPosition / width);
-    setCurrentDateIndex(index);
+    if (index !== currentDateIndex) {
+      triggerHaptic(); // Trigger haptic feedback when the index changes
+      setCurrentDateIndex(index);
+    }
   };
 
   const scrollToDate = (index: React.SetStateAction<number>) => {
     setCurrentDateIndex(index);
+    const offset = 20; // Adjust this value as needed for better visibility
     scrollViewRef.current?.scrollTo({
+      x: (Number(index) * width) - offset,
+      animated: true,
+    });
+    dateScrollViewRef.current?.scrollTo({
       x: Number(index) * width,
       animated: true,
     });
   };
+
+  // const goToPreviousMonth = () => {
+  //   if (currentMonth === 0) {
+  //     setCurrentMonth(11);
+  //     setCurrentYear(currentYear - 1);
+  //   } else {
+  //     setCurrentMonth(currentMonth - 1);
+  //   }
+  // };
+
+  // const goToNextMonth = () => {
+  //   if (currentMonth === 11) {
+  //     setCurrentMonth(0);
+  //     setCurrentYear(currentYear + 1);
+  //   } else {
+  //     setCurrentMonth(currentMonth + 1);
+  //   }
+  // };
 
   return (
     <View style={styles.container}>
@@ -49,6 +98,21 @@ const HomeScreen = () => {
         colors={['#f7eee3', '#B6C874', '#D9BA72', '#C73A3C', '#6FD9E5']}
         style={styles.background}
       />
+
+      {/* <View style={styles.monthNavigation}>
+        <TouchableOpacity onPress={goToPreviousMonth}>
+          <Text style={styles.navigationButton}>Previous</Text>
+        </TouchableOpacity>
+        <Text style={styles.monthYearText}>
+          {new Date(currentYear, currentMonth, 1).toLocaleString('default', {
+            month: 'long',
+            year: 'numeric',
+          })}
+        </Text>
+        <TouchableOpacity onPress={goToNextMonth}>
+          <Text style={styles.navigationButton}>Next</Text>
+        </TouchableOpacity>
+      </View> */}
 
       <ScrollView
         horizontal
@@ -62,42 +126,55 @@ const HomeScreen = () => {
           const index = Math.round(
             event.nativeEvent.contentOffset.x / width
           );
-          setCurrentDateIndex(index);
+          if (index !== currentDateIndex) {
+            triggerHaptic(); // Also trigger on momentum scroll end
+            setCurrentDateIndex(index);
+          }
         }}
       >
-        {weekDates.map((date, index) => {
-          return (
-            <View key={index} style={[styles.dateContainer, { width: width }]}>
-              <Text style={styles.dateText}>
-                {date.getDate()} {date.toLocaleString('default', { month: 'long' })},{' '}
-                {date.getFullYear()}
-              </Text>
+        {monthDates.map((date, index) => (
+          <View key={index} style={[styles.dateContainer, { width: width }]}>
+            <Text style={styles.dateText}>
+              {new Date(date).getDate()} {new Date(date).toLocaleString('default', { month: 'long' })},{' '}
+              {new Date(date).getFullYear()}
+            </Text>
 
-              <View style={styles.inputContainer}>
-                <LinearGradient
-                  colors={[
-                    '#B6C874',
-                    '#f7eee3',
-                    '#D9BA72',
-                    '#C73A3C',
-                    '#6FD9E5',
-                  ]}
-                  style={styles.background}
-                />
-                <View style={styles.bodergrad}>
-                  <TextInput style={styles.textInput} multiline={true} />
-                </View>
+            <View style={styles.inputContainer}>
+              <LinearGradient
+                colors={[
+                  '#B6C874',
+                  '#f7eee3',
+                  '#D9BA72',
+                  '#C73A3C',
+                  '#6FD9E5',
+                ]}
+                style={styles.background}
+              />
+              <View style={styles.bodergrad}>
+                <TextInput style={styles.textInput} multiline={true} />
               </View>
             </View>
-          );
-        })}
+          </View>
+        ))}
       </ScrollView>
 
-      <View style={styles.datebox}>
-        {weekDates.map((date, index) => (
+      <ScrollView
+        horizontal
+        ref={dateScrollViewRef}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.datebox}
+        snapToInterval={width}
+        snapToAlignment="center"
+        decelerationRate="fast"
+      >
+        {monthDates.map((date, index) => (
           <TouchableOpacity
             key={index}
             onPress={() => scrollToDate(index)}
+            style={[
+              styles.dateButton,
+              index === currentDateIndex ? styles.selectedDate : null,
+            ]}
           >
             <Text
               style={[
@@ -105,11 +182,11 @@ const HomeScreen = () => {
                 index === currentDateIndex ? styles.highlightedDate : null,
               ]}
             >
-              {date.getDate()}
+              {new Date(date).getDate()}
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
     </View>
   );
 };
@@ -153,7 +230,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     width: '90%',
     height: '80%',
-    backgroundColor: '#181818',
+    backgroundColor: '#0c0c0c',
     borderRadius: 24,
     padding: 4,
     color: '#FFF',
@@ -180,18 +257,42 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   datebox: {
-    backgroundColor: '#f7eee320',
+    backgroundColor: '#0c0c0c',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 20,
+    padding: 5,
     margin: 2,
     width: '90%',
     borderRadius: 10,
+     // Allow dates to wrap to the next line
   },
   highlightedDate: {
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 22,
+  },
+  monthNavigation: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '90%',
+    padding: 10,
+  },
+  navigationButton: {
+    color: '#FFF',
+    fontSize: 16,
+  },
+  monthYearText: {
+    color: '#FFF',
+    fontSize: 20,
+  },
+  dateButton: {
+    padding: 10, // Add padding for better touch area
+    borderRadius: 10, // Rounded corners
+  },
+  selectedDate: {
+    // Highlight color for selected date
+    transform: [{ scale: 1.1 }], // Slightly increase size for effect
   },
 });
 
