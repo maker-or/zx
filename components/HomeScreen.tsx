@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import { StatusBar } from 'expo-status-bar';
 
 const { width } = Dimensions.get('window');
 
@@ -187,6 +188,7 @@ const HomeScreen = () => {
           </TouchableOpacity>
         ))}
       </ScrollView>
+      <StatusBar style="auto" />
     </View>
   );
 };

@@ -2,6 +2,7 @@
   "expo": {
     "name": "my-expo-app",
     "slug": "my-expo-app",
+    "scheme": "my-expo-app",
     "version": "1.0.0",
     "web": {
       "favicon": "./assets/favicon.png"
@@ -10,12 +11,15 @@
       "tsconfigPaths": true
     },
     "plugins": [
-      [      "expo-font",
-      {
-        "fonts": ["./assets/fonts/InstrumentSerif-Regular.ttf"]
-
-      }]
-
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/InstrumentSerif-Regular.ttf"
+          ]
+        }
+      ],
+      "expo-sqlite"
     ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
