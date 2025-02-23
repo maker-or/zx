@@ -1,99 +1,120 @@
-import React, { useState, useRef, useEffect } from 'react';
 import {
-  View,
-  Text,
   StyleSheet,
-  TextInput,
-  ScrollView,
   Dimensions,
-  TouchableOpacity,
-  Platform,
 } from 'react-native';
 
+
 export const style = StyleSheet.create({
+  text: {
+    fontFamily: 'InstrumentSerif',
+  },
   container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-    fontFamily: 'InstrumentSerif'
-  },
-  background: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    height: 300,
-    backgroundColor: '#FFFFFF',
-  },
-  dateContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontFamily: 'serif',
-    paddingBottom: 40,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
     height: '100%',
+    flex: 1,
+    overflow: 'hidden',
+    filter: 'blur(3rem)'
   },
-  header: {
-    justifyContent: 'center',
+  datePageContainer: {
+    flex: 1,
+    height: '100%',
+    width: '100%',
+
+  },
+
+
+  //background for each week
+  contentContainer: {
+    flex: 1,
+    height: '100%',
+    width: '100%',
     alignItems: 'center',
     padding: 24,
-    width: '100%',
+  
   },
+  dateSection: {
+    width: '100%',
+    height: '90%',
+    alignItems: 'center',
+    padding: 2,
+    borderRadius: 24,
+    marginBottom: 20,
+  },
+  bord: {
+
+    flex: 1,
+    width: '100%',
+    height: '100%', // added height: '100%'
+    borderRadius: 24,
+  
+
+    shadowColor: '#000',
+  },
+
+in:{
+  flex: 1,
+  width: '100%',
+  height: '100%', // added height: '100%'
+  borderRadius: 24,
+  padding: 4,
+  filter: 'blur(3rem)'
+
+
+},
+
   dateText: {
-    color: '#1F2937',
-    fontSize: 32,
+    color: '#FFFFFF',
+    fontSize: 40,
     fontWeight: '600',
-    marginBottom: 24,
     fontFamily: 'InstrumentSerif',
-    letterSpacing: -0.5,
+    letterSpacing: -0.75,
     textAlign: 'center',
+    marginBottom: 24,
   },
   inputContainer: {
-    width: '92%',
-    height: '80%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    color: '#1F2937',
+    flex: 1,
+    width: '100%',
+    height: '100%', // added height: '100%'
+    backgroundColor: '#0c0c0c',
+    borderRadius: 24,
+    padding: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-    transform: [{ translateY: 0 }],
+
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 5,
   },
   textInput: {
-    color: '#1F2937',
-    fontSize: 20,
-    height: '100%',
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 24,
     width: '100%',
     borderRadius: 16,
     textAlignVertical: 'top',
     backgroundColor: 'transparent',
     fontFamily: 'InstrumentSerif',
-    padding: 0,
-    lineHeight: 32,
+    padding: 16,
+    lineHeight: 40,
+    marginTop: 16,
+    minHeight: 160,
   },
   weekIndicator: {
     position: 'absolute',
-    bottom: 16,
-    width: '100%',
+    bottom: 20,
+    width: '92%',
+    alignSelf: 'center',
     textAlign: 'center',
     fontSize: 18,
-    color: '#1F2937',
+    color: '#FFFFFF',
     fontFamily: 'InstrumentSerif',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 8,
+    backgroundColor: 'rgba(44, 62, 80, 0.9)',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   bodergrad: {
     flex: 1,
@@ -101,9 +122,9 @@ export const style = StyleSheet.create({
     borderRadius: 20,
     padding: 10,
     width: '100%',
-    height: '100%',
+    height: '100%', // added height: '100%'
     backgroundColor: '#FFFFFF',
-    color: '#1F2937',
+    color: '#212529',
   },
   promptText: {
     color: '#777',
@@ -111,9 +132,9 @@ export const style = StyleSheet.create({
     fontFamily: 'InstrumentSerif',
   },
   message: {
-    color: '#1F2937',
+    color: '#212529',
     fontSize: 20,
-    height: '100%',
+    height: '100%', // added height: '100%'
     width: '100%',
     borderRadius: 16,
     textAlignVertical: 'top',
@@ -125,7 +146,8 @@ export const style = StyleSheet.create({
   weekContainer: {
     height: Dimensions.get('window').height,
     width: '100%',
-    backgroundColor: '#FFFFFF',
+    flex: 1,
+    overflow: 'hidden',
   },
   weekNavigation: {
     flexDirection: 'row',
@@ -135,7 +157,16 @@ export const style = StyleSheet.create({
   },
   weekNumberText: {
     fontSize: 18,
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontFamily: 'InstrumentSerif',
+    marginTop: 16,
+    opacity: 0.8,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  weekCell: {
+    backgroundColor: '#FFFFFF',
+    
   },
   dayContainer: {
     width: 40,
@@ -148,5 +179,29 @@ export const style = StyleSheet.create({
   },
   dayText: {
     fontSize: 16,
+  },
+  charCountText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+    alignSelf: 'flex-end',
+    marginTop: 4,
+  },
+  button: {
+    backgroundColor: '#4A90E2',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  buttonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
