@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TextInput,
   ScrollView,
   Dimensions,
@@ -16,80 +15,139 @@ import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-g
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { Link } from 'expo-router';
+import { style } from './style';
+import { Animated } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
 const HomeScreen = () => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date();
   const router = useRouter();
+  const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [currentDateIndex, setCurrentDateIndex] = useState(0);
-  const scrollViewRef = useRef<ScrollView | null>(null);
-  const [monthDates, setMonthDates] = useState<string[]>([]);
-  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth()); // 0-11
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const weekScrollViewRef = useRef<ScrollView | null>(null);
   const dateScrollViewRef = useRef<ScrollView | null>(null);
+  const [monthWeeks, setMonthWeeks] = useState<Date[][]>([]);
+  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
+  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const [initialScrollDone, setInitialScrollDone] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
+  const inputAnimation = useRef(new Animated.Value(0)).current;
 
   const [fontsLoaded] = useFonts({
     'InstrumentSerif': require('assets/fonts/InstrumentSerif-Regular.ttf')
-  })
+  });
 
   useEffect(() => {
-    generateMonthDates(currentMonth, currentYear);
+    generateMonthWeeks(currentMonth, currentYear);
   }, [currentMonth, currentYear]);
 
   useEffect(() => {
-    const todayIndex = monthDates.findIndex(date => date === today);
-    if (todayIndex !== -1) {
-      scrollToDate(todayIndex);
-    }
-  }, [monthDates]);
+    if (monthWeeks.length > 0 && !initialScrollDone) {
+      const todayDate = new Date();
+      
+      const weekIndex = monthWeeks.findIndex(week => 
+        week.some(date => 
+          date.getDate() === todayDate.getDate() &&
+          date.getMonth() === todayDate.getMonth() &&
+          date.getFullYear() === todayDate.getFullYear()
+        )
+      );
 
-  const generateMonthDates = (month: number, year: number) => {
+      const dateIndex = weekIndex !== -1 ? 
+        monthWeeks[weekIndex].findIndex(date => 
+          date.getDate() === todayDate.getDate() &&
+          date.getMonth() === todayDate.getMonth() &&
+          date.getFullYear() === todayDate.getFullYear()
+        ) : 0;
+
+      if (weekIndex !== -1) {
+        weekScrollViewRef.current?.scrollTo({
+          y: weekIndex * Dimensions.get('window').height,
+          animated: true
+        });
+        setCurrentWeekIndex(weekIndex);
+
+        if (dateIndex !== -1) {
+          setTimeout(() => {
+            dateScrollViewRef.current?.scrollTo({
+              x: dateIndex * width,
+              animated: true
+            });
+            setCurrentDateIndex(dateIndex);
+          }, 100); 
+        }
+      }
+      setInitialScrollDone(true);
+    }
+  }, [monthWeeks, initialScrollDone]);
+
+  useEffect(() => {
+    Animated.spring(inputAnimation, {
+      toValue: inputFocused ? 1 : 0,
+      useNativeDriver: true,
+      damping: 15,
+      mass: 0.8,
+      stiffness: 100,
+    }).start();
+  }, [inputFocused]);
+
+  const generateMonthWeeks = (month: number, year: number) => {
     const firstDayOfMonth = new Date(year, month, 1);
     const lastDayOfMonth = new Date(year, month + 1, 0);
-    const daysInMonth = lastDayOfMonth.getDate();
+    const weeks: Date[][] = [];
+    let currentWeek: Date[] = [];
 
-    const dates = [];
-    for (let i = 1; i <= daysInMonth; i++) {
-      dates.push(new Date(year, month, i));
+    for (let i = firstDayOfMonth.getDay() - 1; i >= 0; i--) {
+      const date = new Date(year, month, -i);
+      currentWeek.push(date);
     }
-    setMonthDates(dates.map(date => date.toISOString()));
-    setCurrentDateIndex(0);
-    setTimeout(() => {
-      if (scrollViewRef.current) {
-        scrollViewRef.current.scrollTo({ x: 0, animated: false });
+
+    for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
+      const date = new Date(year, month, day);
+      currentWeek.push(date);
+
+      if (currentWeek.length === 7) {
+        weeks.push(currentWeek);
+        currentWeek = [];
       }
-    }, 0);
+    }
+
+    if (currentWeek.length > 0) {
+      const daysToAdd = 7 - currentWeek.length;
+      for (let i = 1; i <= daysToAdd; i++) {
+        const date = new Date(year, month + 1, i);
+        currentWeek.push(date);
+      }
+      weeks.push(currentWeek);
+    }
+
+    setMonthWeeks(weeks);
   };
 
   const triggerHaptic = () => {
-    //Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    // Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
   };
 
-  const handleScroll = (event: { nativeEvent: { contentOffset: { x: any; }; }; }) => {
+  const handleDateScroll = (event: { nativeEvent: { contentOffset: { x: number } } }) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
     const index = Math.round(scrollPosition / width);
     if (index !== currentDateIndex) {
-      triggerHaptic(); // Trigger haptic feedback when the index changes
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setCurrentDateIndex(index);
     }
   };
 
-  const scrollToDate = (index: React.SetStateAction<number>) => {
-    setCurrentDateIndex(index);
-    const offset = 20; // Adjust this value as needed for better visibility
-    scrollViewRef.current?.scrollTo({
-      x: (Number(index) * width) - offset,
-      animated: true,
-    });
-    dateScrollViewRef.current?.scrollTo({
-      x: Number(index) * width,
-      animated: true,
-    });
+  const handleWeekScroll = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const newIndex = Math.round(offsetY / Dimensions.get('window').height);
+    
+    if (newIndex !== currentWeekIndex) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setCurrentWeekIndex(newIndex);
+    }
   };
 
   const pinchGesture = Gesture.Pinch()
@@ -97,250 +155,91 @@ const HomeScreen = () => {
       router.push('/week');
     });
 
-  useEffect(() => {
-    const todayIndex = monthDates.findIndex(date => date === today);
-    if (todayIndex !== -1) {
-      scrollToDate(todayIndex);
-    }
-  }, [monthDates]);
+  const inputContainerStyle = {
+    ...style.inputContainer,
+    transform: [
+      {
+        translateY: inputAnimation.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -10],
+        }),
+      },
+    ],
+  };
 
-  const inputContainer = (date: string) => {
-    if (date === today) {
-      return (
+  const inputContainer = (date: Date) => {
+    const isToday = date.getDate().toString() === today.getDate().toString() &&
+                    date.getMonth() === today.getMonth() &&
+                    date.getFullYear() === today.getFullYear();
+
+    return (
+      <Animated.View style={inputContainerStyle}>
         <TextInput
-          style={styles.textInput}
-          multiline={true}
-          placeholder='Whats on your mind,today ?'
-          placeholderTextColor='#f7eee350'
+          style={style.textInput}
+          multiline
+          placeholder={isToday ? 'Whats on your mind, today?' : ''}
+          placeholderTextColor='#0c0c0c'
+          onFocus={() => {
+            setInputFocused(true);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }}
+          onBlur={() => setInputFocused(false)}
         />
-      );
-    } else {
-      return (
-        <Text style={styles.message}>Unless you have a time machine, you cannot edit it</Text>
-      );
-    }
+      </Animated.View>
+    );
+  };
+
+  const renderWeek = (week: Date[], index: number) => {
+    return (
+      <View key={index} style={style.weekContainer}>
+        <ScrollView
+          ref={dateScrollViewRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={handleDateScroll}
+          scrollEventThrottle={16}
+          contentContainerStyle={{ width: width * week.length }}
+        >
+          {week.map((date, dateIndex) => (
+            <View key={dateIndex} style={{ width: width }}>
+              <View style={style.dateContainer}>
+                <View style={style.header}>
+                  <Text style={style.dateText}>
+                    {date.toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </Text>
+                </View>
+                {inputContainer(date)}
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+    );
   };
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <GestureDetector gesture={pinchGesture}>
-        <View style={styles.container}>
-          <LinearGradient
-            colors={['#f7eee3', '#B6C874', '#D9BA72', '#C73A3C', '#6FD9E5']}
-            style={styles.background}
-          />
-          <StatusBar style="light" />
+        <View style={style.container}>
+          <StatusBar style="dark" />
           <ScrollView
-            horizontal
+            ref={weekScrollViewRef}
             pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={handleScroll}
-            scrollEventThrottle={8}
-            ref={scrollViewRef}
-            contentContainerStyle={styles.scrollViewContent}
-            decelerationRate='fast'
-            snapToInterval={width}
-            snapToAlignment='center'
-            onMomentumScrollEnd={(event) => {
-              const index = Math.round(
-                event.nativeEvent.contentOffset.x / width
-              );
-              if (index !== currentDateIndex) {
-                triggerHaptic();
-                setCurrentDateIndex(index);
-              }
-            }}
+            showsVerticalScrollIndicator={false}
+            onScroll={handleWeekScroll}
+            scrollEventThrottle={16}
           >
-            {monthDates.map((date, index) => (
-              <View key={index} style={[styles.dateContainer, { width: width }]}>
-                <Text style={styles.dateText}>
-                  {new Date(date).getDate()} {new Date(date).toLocaleString('default', { month: 'long' })},{' '}
-                  {new Date(date).getFullYear()}
-                </Text>
-
-                <View style={styles.inputContainer}>
-                  <LinearGradient
-                    colors={[
-                      '#B6C874',
-                      '#f7eee3',
-                      '#D9BA72',
-                      '#C73A3C',
-                      '#6FD9E5',
-                    ]}
-                    style={styles.background}
-                  />
-                  {inputContainer(date)}
-                </View>
-              </View>
-            ))}
+            {monthWeeks.map((week, index) => renderWeek(week, index))}
           </ScrollView>
-
-          <ScrollView
-            horizontal
-            ref={dateScrollViewRef}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.datebox}
-            snapToInterval={width}
-            snapToAlignment="center"
-            decelerationRate="fast"
-          >
-            {monthDates.map((date, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => scrollToDate(index)}
-                style={[
-                  styles.dateButton,
-                  index === currentDateIndex ? styles.selectedDate : null,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.promptText,
-                    index === currentDateIndex ? styles.highlightedDate : null,
-                  ]}
-                >
-                  {new Date(date).getDate()}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          <Link href="/week" style={{ padding: 10, backgroundColor: '#007bff', color: 'white', borderRadius: 5, textAlign: 'center' }}>
-            Week
-          </Link>
         </View>
       </GestureDetector>
     </GestureHandlerRootView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0c0c0c',
-    fontFamily: 'InstrumentSerif'
-  },
-  background: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    height: 300,
-    filter: 'blur(70px)',
-  },
-  scrollViewContent: {
-    flexDirection: 'row',
-  },
-  dateContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontFamily: 'serif',
-  },
-  header: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    width: '100%',
-  },
-  dateText: {
-    color: '#FFF',
-    fontSize: 26,
-    fontWeight: '600',
-    marginBottom: 20,
-    fontFamily: 'InstrumentSerif',
-  },
-
-  inputContainer: {
-    width: '90%',
-    height: '80%',
-    backgroundColor: '#0c0c0c',
-    borderRadius: 24,
-    padding: 4,
-    color: '#FFF',
-  },
-  bodergrad: {
-    flex: 1,
-    justifyContent: 'center',
-    borderRadius: 20,
-    padding: 10,
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#0c0c0c',
-    color: '#FFF',
-  },
-  promptText: {
-    color: '#777',
-    fontSize: 20,
-    fontFamily: 'InstrumentSerif',
-  },
-  textInput: {
-    color: '#E0E0E0',
-    fontSize: 42,
-    height: '100%',
-    width: '100%',
-    borderRadius: 24,
-    textAlignVertical: 'top',
-    backgroundColor: '#0c0c0c',
-    fontFamily: 'InstrumentSerif',
-    padding:10
-  },
-  message: {
-    color: '#f7eee350',
-    fontSize: 36,
-    height: '100%',
-    width: '100%',
-    borderRadius: 24,
-    textAlignVertical: 'top',
-    backgroundColor: '#0c0c0c',
-    fontFamily: 'InstrumentSerif',
-    padding:10
-  },
-  datebox: {
-    backgroundColor: '#0c0c0c',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 5,
-    margin: 2,
-    width: '90%',
-    borderRadius: 10,
-    fontFamily: 'InstrumentSerif',
-  },
-  highlightedDate: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 22,
-    fontFamily: 'InstrumentSerif',
-  },
-  monthNavigation: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '90%',
-    padding: 10,
-    fontFamily: 'InstrumentSerif',
-  },
-  navigationButton: {
-    color: '#FFF',
-    fontSize: 16,
-    fontFamily: 'InstrumentSerif',
-  },
-  monthYearText: {
-    color: '#FFF',
-    fontSize: 20,
-    fontFamily: 'InstrumentSerif',
-  },
-  dateButton: {
-    padding: 10,
-    borderRadius: 10, 
-    fontFamily: 'InstrumentSerif',
-  },
-  selectedDate: {
-
-    transform: [{ scale: 1.1 }],
-    fontFamily: 'InstrumentSerif', 
-  },
-});
-
+ 
 export default HomeScreen;
