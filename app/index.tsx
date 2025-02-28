@@ -22,12 +22,19 @@ import { useFonts } from 'expo-font';
 import { Link } from 'expo-router';
 import { style } from './style';
 import { Animated } from 'react-native';
+import { usersTable } from '../db/schema';
+import { drizzle } from "drizzle-orm/expo-sqlite";
+import { openDatabaseSync } from "expo-sqlite";
+import { useAuth } from "@clerk/clerk-expo";
+import { v4 as uuidv4 } from "uuid";
+
 
 const { width } = Dimensions.get('window');
 
 const DatePage = ({ date, isToday }: { date: Date; isToday: boolean }) => {
   const [inputFocused, setInputFocused] = useState(false);
   const inputAnimation = useRef(new Animated.Value(0)).current;
+  const [inputValue, setInputValue] = useState('');
 
   useEffect(() => {
     Animated.spring(inputAnimation, {
@@ -60,7 +67,6 @@ const DatePage = ({ date, isToday }: { date: Date; isToday: boolean }) => {
       inputRange: [0, 1],
       outputRange: ['#ccc', '#4A90E2'],
     }),
-
   };
 
   const onFocus = () => {
@@ -79,6 +85,27 @@ const DatePage = ({ date, isToday }: { date: Date; isToday: boolean }) => {
     return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
   };
 
+  const handleSubmit = async () => {
+    try {
+      const { userId } = useAuth();
+      const expo = openDatabaseSync("db.db");
+      const db = drizzle(expo);
+      await db.insert(usersTable).values({
+        id: uuidv4(), // Generate a UUID for the primary key
+        userID: userId,
+        month: new Date().getMonth() + 1, // Current month
+        year: new Date().getFullYear(), // Current year
+        date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
+        memory: inputValue,
+         // Placeholder or actual value
+       
+      });
+      console.log('Input stored successfully!');
+    } catch (error) {
+      console.error('Failed to store input:', error);
+    }
+  };
+
   return (
     <SafeAreaView style={style.container}>
       <View style={style.datePageContainer}>
@@ -92,36 +119,39 @@ const DatePage = ({ date, isToday }: { date: Date; isToday: boolean }) => {
               })}
             </Text>
             <View style={style.bord}>
-            <LinearGradient
-        colors={[
-          '#0c0c0c50',
-          '#D9BA72',
-          '#f7eee350',
-          '#0c0c0c',
-          '#0c0c0c',
-          '#0c0c0c',
-        ]}
-        style={style.in}
-      >
-            <Animated.View style={[style.inputContainer, animatedInputStyle]}>
-              <TextInput
-                style={[style.textInput, { borderColor: inputFocused ? '#4A90E2' : '#ccc' }]}
-                multiline
-                placeholder="Write your thoughts for today..."
-                placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                onFocus={onFocus}
-                onBlur={onBlur}
-                selectionColor="#4A90E2"
-                accessibilityLabel="Daily journal entry"
-                accessibilityHint="Write your thoughts, ideas, or experiences for today"
-                accessibilityRole="text"
-                importantForAccessibility="yes"
-                autoCorrect={true}
-                spellCheck={true}
-                clearButtonMode="while-editing"
-              />
-            </Animated.View>
-            </LinearGradient>
+              <LinearGradient
+                colors={[
+                  '#0c0c0c50',
+                  '#D9BA72',
+                  '#f7eee350',
+                  '#0c0c0c',
+                  '#0c0c0c',
+                  '#0c0c0c',
+                ]}
+                style={style.in}
+              >
+                <Animated.View style={[style.inputContainer, animatedInputStyle]}>
+                  <TextInput
+                    style={[style.textInput, { borderColor: inputFocused ? '#4A90E2' : '#ccc' }]}
+                    multiline
+                    placeholder="Write your thoughts for today..."
+                    placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                    onFocus={onFocus}
+                    onBlur={onBlur}
+                    selectionColor="#4A90E2"
+                    accessibilityLabel="Daily journal entry"
+                    accessibilityHint="Write your thoughts, ideas, or experiences for today"
+                    accessibilityRole="text"
+                    importantForAccessibility="yes"
+                    autoCorrect={true}
+                    spellCheck={true}
+                    clearButtonMode="while-editing"
+                    value={inputValue}
+                    onChangeText={(text) => setInputValue(text)}
+                    onSubmitEditing={handleSubmit}
+                  />
+                </Animated.View>
+              </LinearGradient>
             </View>
             <Text style={style.weekNumberText}>
               Week {getWeekNumber(date)}

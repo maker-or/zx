@@ -77,8 +77,8 @@ in:{
     backgroundColor: '#0c0c0c',
     borderRadius: 24,
     padding: 24,
-    shadowColor: '#000',
-
+    // shadowColor: '#fff',
+    fontFamily: 'InstrumentSerif',
     shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 5,
