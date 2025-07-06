@@ -1,570 +1,150 @@
+import * as Haptics from 'expo-haptics';
 import 'react-native-get-random-values';
-import React, { useState, useRef, useEffect } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
-  ScrollView,
-  Dimensions,
   TouchableOpacity,
-  Platform,
   SafeAreaView,
+  Dimensions,
+  Platform,
+  StyleSheet,
 } from 'react-native';
+
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
 import { StatusBar } from 'expo-status-bar';
-import {
-  GestureDetector,
-  Gesture,
-  GestureHandlerRootView,
-} from 'react-native-gesture-handler';
-import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { Link } from 'expo-router';
-import { style } from '../_style';
-import { Animated } from 'react-native';
-import { usersTable } from '../../db/schema';
-import { drizzle } from "drizzle-orm/expo-sqlite";
-import { openDatabaseSync } from "expo-sqlite";
-import { v4 as uuidv4 } from "uuid";
-import { useDrizzleStudio } from "expo-drizzle-studio-plugin";
-import { useSQLiteContext } from 'expo-sqlite';
-import * as schema from '../../db/schema';
-import { useMemory } from '../../hooks/useMemory';
-import { Memory } from '../../services/memory';
-import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '@clerk/clerk-expo';
-import { MoodTracker, MoodDisplay, MoodType } from '../../components/MoodTracker';
-import { DailyPrompts } from '../../components/DailyPrompts';
-import { LoadingSpinner, ErrorMessage, EmptyState } from '../../components/UIComponents';
 import { BlurView } from 'expo-blur';
 
-const { width } = Dimensions.get('window');
+import { useRouter } from 'expo-router';
+import { useMemory } from '../../hooks/useMemory';
+import { useAuth } from '@clerk/clerk-expo';
+import { LoadingSpinner } from '../../components/UIComponents';
 
-// Floating Bottom Navigation Component
-const FloatingBottomNavigation = ({ 
-  currentMonth, 
-  currentYear, 
-  onPreviousMonth, 
-  onNextMonth, 
-  onToday,
-  onReflection,
-  onSettings
-}: {
-  currentMonth: number;
-  currentYear: number;
-  onPreviousMonth: () => void;
-  onNextMonth: () => void;
-  onToday: () => void;  
-  onReflection: () => void;
-  onSettings: () => void;
-}) => {
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
+const { width, height } = Dimensions.get('window');
+
+// const { width, height } = Dimensions.get('window');
+
+// Time-based greeting component
+const TimeBasedGreeting = () => {
+  const [greeting, setGreeting] = useState('');
+
+  useEffect(() => {
+    const updateGreeting = () => {
+      const hour = new Date().getHours();
+      if (hour >= 5 && hour < 12) {
+        setGreeting('Good Morning');
+      } else if (hour >= 12 && hour < 17) {
+        setGreeting('Good Afternoon');
+      } else {
+        setGreeting('Good Evening');
+      }
+    };
+
+    updateGreeting();
+    const interval = setInterval(updateGreeting, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <View style={style.floatingNavContainer}>
-      {Platform.OS === 'ios' ? (
-        <BlurView 
-          intensity={100} 
-          tint="dark" 
-          style={style.floatingNavBlur}
-        >
-          <View style={style.floatingNavContent}>
-            <TouchableOpacity 
-              style={style.navButton} 
-              onPress={onPreviousMonth}
-              accessibilityLabel="Previous month"
-              accessibilityRole="button"
-            >
-              <Text style={style.navButtonText}>‹</Text>
-            </TouchableOpacity>
-            
-            <View style={style.monthYearContainer}>
-              <Text style={style.monthYearText}>
-                {monthNames[currentMonth]} {currentYear}
-              </Text>
-            </View>
-            
-            <TouchableOpacity 
-              style={style.navButton} 
-              onPress={onNextMonth}
-              accessibilityLabel="Next month"
-              accessibilityRole="button"
-            >
-              <Text style={style.navButtonText}>›</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={style.todayButton} 
-              onPress={onToday}
-              accessibilityLabel="Go to today"
-              accessibilityRole="button"
-            >
-              <Text style={style.todayButtonText}>Today</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={style.reflectionButton} 
-              onPress={onReflection}
-              accessibilityLabel="AI Reflections"
-              accessibilityRole="button"
-            >
-              <Text style={style.reflectionButtonText}>🧠</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={style.settingsButton} 
-              onPress={onSettings}
-              accessibilityLabel="Settings"
-              accessibilityRole="button"
-            >
-              <Text style={style.settingsButtonText}>⚙️</Text>
-            </TouchableOpacity>
-          </View>
-        </BlurView>
-      ) : (
-        <View style={style.floatingNavFallback}>
-          <View style={style.floatingNavContent}>
-            <TouchableOpacity 
-              style={style.navButton} 
-              onPress={onPreviousMonth}
-              accessibilityLabel="Previous month"
-              accessibilityRole="button"
-            >
-              <Text style={style.navButtonText}>‹</Text>
-            </TouchableOpacity>
-            
-            <View style={style.monthYearContainer}>
-              <Text style={style.monthYearText}>
-                {monthNames[currentMonth]} {currentYear}
-              </Text>
-            </View>
-            
-            <TouchableOpacity 
-              style={style.navButton} 
-              onPress={onNextMonth}
-              accessibilityLabel="Next month"
-              accessibilityRole="button"
-            >
-              <Text style={style.navButtonText}>›</Text>
-            </TouchableOpacity>
-            
-            {/* <TouchableOpacity 
-              style={style.todayButton} 
-              onPress={onToday}
-              accessibilityLabel="Go to today"
-              accessibilityRole="button"
-            >
-              <Text style={style.todayButtonText}>Today</Text>
-            </TouchableOpacity> */}
-            
-            <TouchableOpacity 
-              style={style.reflectionButton} 
-              onPress={onReflection}
-              accessibilityLabel="AI Reflections"
-              accessibilityRole="button"
-            >
-              <Text style={style.reflectionButtonText}>🧠</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={style.settingsButton} 
-              onPress={onSettings}
-              accessibilityLabel="Settings"
-              accessibilityRole="button"
-            >
-              <Text style={style.settingsButtonText}>⚙️</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
+    <View style={newStyles.greetingContainer}>
+      <Text style={newStyles.greetingText}>{greeting}.</Text>
     </View>
   );
 };
 
-
-
-const DatePage = ({ 
-  date, 
-  isToday, 
-  hasMemory = false 
-}: { 
-  date: Date; 
-  isToday: boolean; 
-  hasMemory?: boolean;
+// Week calendar component
+const WeekCalendar = ({
+  selectedDate,
+  onDateSelect,
+  isEditingUnlocked,
+  onUnlockEditing,
+}: {
+  selectedDate: Date;
+  onDateSelect: (date: Date) => void;
+  isEditingUnlocked: boolean;
+  onUnlockEditing: () => void;
 }) => {
-  const [inputFocused, setInputFocused] = useState(false);
-  const inputAnimation = useRef(new Animated.Value(0)).current;
-  const [inputValue, setInputValue] = useState('');
-  const [existingMemory, setExistingMemory] = useState<string>('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [selectedMood, setSelectedMood] = useState<MoodType | undefined>();
-  const [usedPrompt, setUsedPrompt] = useState<string>('');
-  const { userId } = useAuth();
+  const [currentWeek, setCurrentWeek] = useState<Date[]>([]);
+  const today = new Date();
 
-  // Get theme
-  const { theme, isDark } = useTheme();
-
-  const db = useSQLiteContext();
-  const drizzleDb = drizzle(db, { schema});
-  useDrizzleStudio(db);
-  
-  const { saveMemory, getMemoryByDate, canEditMemory, isToday: isTodayCheck, loading: memoryLoading, error: memoryError } = useMemory(userId || '');
-
-  // Check if this date can be edited
-  const canEdit = canEditMemory(date);
-  const isTodayDate = isTodayCheck(date);
-
-  // Load existing memory when date changes
   useEffect(() => {
-    const loadMemory = async () => {
-      if (!userId) return;
-      const memory = await getMemoryByDate(date);
-      if (memory) {
-        setExistingMemory(memory.memory);
-        setInputValue(memory.memory);
-        setSelectedMood(memory.mood as any);
-        setUsedPrompt(memory.prompt || '');
-        setIsEditing(false); // Start in read-only mode for existing memories
-      } else {
-        setExistingMemory('');
-        setInputValue('');
-        setSelectedMood(undefined);
-        setUsedPrompt('');
-        // Only start in edit mode if it's today (can edit)
-        setIsEditing(canEdit);
+    const generateCurrentWeek = () => {
+      const week: Date[] = [];
+      const startOfWeek = new Date(today);
+      const dayOfWeek = startOfWeek.getDay();
+
+      // Adjust to start from Monday
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      startOfWeek.setDate(startOfWeek.getDate() + mondayOffset);
+
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(startOfWeek);
+        date.setDate(startOfWeek.getDate() + i);
+        week.push(date);
       }
-      setHasUnsavedChanges(false);
+
+      setCurrentWeek(week);
     };
 
-    loadMemory();
-  }, [date, canEdit, userId]);
+    generateCurrentWeek();
+  }, []);
 
-  useEffect(() => {
-    Animated.spring(inputAnimation, {
-      toValue: inputFocused ? 1 : 0,
-      useNativeDriver: true,
-      damping: 12,
-      mass: 1,
-      stiffness: 120,
-    }).start();
-  }, [inputFocused]);
+  const dayNames = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
-  const animatedInputStyle = {
-    transform: [
-      {
-        scale: inputAnimation.interpolate({
-          inputRange: [0, 1],
-          outputRange: [1, 1.05],
-        }),
-      },
-    ],
-    shadowOpacity: inputAnimation.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0.15, 0.25],
-    }),
-    shadowRadius: inputAnimation.interpolate({
-      inputRange: [0, 1],
-      outputRange: [8, 16],
-    }),
-    borderColor: inputAnimation.interpolate({
-      inputRange: [0, 1],
-      outputRange: ['#ccc', '#4A90E2'],
-    }),
+  const handleDatePress = async (date: Date) => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onDateSelect(date);
   };
 
-  const onFocus = () => {
-    setInputFocused(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
-  const onBlur = () => {
-    setInputFocused(false);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
-  const getWeekNumber = (d: Date) => {
-    const firstDayOfYear = new Date(d.getFullYear(), 0, 1);
-    const pastDaysOfYear = (d.getTime() - firstDayOfYear.getTime()) / 86400000;
-    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-  };
-
-  const handleTextChange = (text: string) => {
-    setInputValue(text);
-    setHasUnsavedChanges(text !== existingMemory);
-  };
-
-  const handleEdit = () => {
-    if (!canEdit) {
-      // Show a message that editing is not allowed
-      return;
-    }
-    setIsEditing(true);
-    setInputFocused(true);
-  };
-
-  const handleCancel = () => {
-    setInputValue(existingMemory);
-    setIsEditing(false);
-    setHasUnsavedChanges(false);
-  };
-
-  const handleSubmit = async () => {
-    if (!inputValue.trim()) return;
-
-    try {
-      const result = await saveMemory(date, inputValue, selectedMood, usedPrompt);
-      if (result.success) {
-        console.log('Memory saved successfully!');
-        setExistingMemory(inputValue);
-        setIsEditing(false);
-        setHasUnsavedChanges(false);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } else {
-        // Error is already set in the hook
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
-    } catch (error) {
-      console.error('Failed to save memory:', error);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+  const handleDateLongPress = async (date: Date) => {
+    const isToday = date.toDateString() === today.toDateString();
+    if (isToday) {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      onUnlockEditing();
     }
   };
 
   return (
-    <SafeAreaView style={style.container}>
-      <View style={style.datePageContainer}>
-        <View style={style.contentContainer}>
-          <View style={style.dateSection}>
-            <Text style={style.dateText}>
-              {date.toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </Text>
-            <View style={style.bord}>
-              <LinearGradient
-                colors={[
-                  '#0c0c0c50',
-                  '#D9BA72',
-                  '#f7eee350',
-                  '#0c0c0c',
-                  '#0c0c0c',
-                  '#0c0c0c',
-                ]}
-                style={style.in}
-              >
-                <Animated.View style={[style.inputContainer, animatedInputStyle]}>
-                  {memoryLoading ? (
-                    <View style={style.loadingContainer}>
-                      <Text style={style.loadingText}>Loading memory...</Text>
-                    </View>
-                  ) : (
-                    <>
-                      {/* Mood Tracker - only show for today */}
-                      {isTodayDate && (
-                        <MoodTracker
-                          selectedMood={selectedMood}
-                          onMoodSelect={setSelectedMood}
-                          disabled={!canEdit}
-                          compact={false}
-                        />
-                      )}
-                      
-                      {/* Daily Prompts - only show for today */}
-                      {/* {isTodayDate && (
-                        <DailyPrompts
-                          onPromptSelect={(prompt) => {
-                            setUsedPrompt(prompt);
-                            setInputValue(prompt + '\n\n');
-                            setShowPrompts(false);
-                          }}
-                          selectedPrompt={usedPrompt}
-                        />
-                      )} */}
-                      
-                      <TextInput
-                        style={[style.textInput, { 
-                          borderColor: inputFocused ? '#4A90E2' : '#ccc',
-                          opacity: !canEdit && existingMemory ? 0.7 : 1.0
-                        }]}
-                        multiline
-                        placeholder={
-                          !canEdit && !existingMemory 
-                            ? "No memory recorded for this day" 
-                            : existingMemory 
-                              ? (canEdit ? "Your memory for this day..." : "Memory from this day (read-only)")
-                              : "Write your thoughts for today..."
-                        }
-                        placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                        onFocus={onFocus}
-                        onBlur={onBlur}
-                        selectionColor="#4A90E2"
-                        accessibilityLabel="Daily journal entry"
-                        accessibilityHint={canEdit ? "Write your thoughts, ideas, or experiences for today" : "View memory from this date (read-only)"}
-                        accessibilityRole="text"
-                        importantForAccessibility="yes"
-                        autoCorrect={true}
-                        spellCheck={true}
-                        clearButtonMode="while-editing"
-                        value={inputValue}
-                        onChangeText={handleTextChange}
-                        editable={isEditing && canEdit}
-                      />
-                      
-                      {/* Bottom section with character count, buttons, and week number */}
-                      <View style={style.bottomSection}>
-                        {/* Mood display for existing memories */}
-                        {!isTodayDate && selectedMood && (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                            <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
-                              Mood: 
-                            </Text>
-                            <MoodDisplay mood={selectedMood} size="small" />
-                          </View>
-                        )}
-                        
-                        {/* Character count */}
-                        {inputValue.length > 0 && (
-                          <Text style={style.charCountText}>
-                            {inputValue.length} characters
-                          </Text>
-                        )}
-                        
-                        {/* Action Buttons */}
-                        {existingMemory && !isEditing ? (
-                          // Read-only mode with conditional edit button
-                          <View style={style.buttonContainer}>
-                            {canEdit ? (
-                              <TouchableOpacity
-                                style={[style.button, style.editButton]}
-                                onPress={handleEdit}
-                                activeOpacity={0.8}
-                                accessibilityLabel="Edit memory"
-                                accessibilityHint="Edit your memory for this day"
-                                accessibilityRole="button"
-                              >
-                                <Text style={style.buttonText}>Edit Memory</Text>
-                              </TouchableOpacity>
-                            ) : (
-                              <View style={style.lockedContainer}>
-                                <Text style={style.lockedText}>
-                                  🔒 This memory is locked
-                                </Text>
-                                <Text style={style.lockedSubtext}>
-                                  You can only edit memories from today to preserve authentic thoughts from each day.
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-                        ) : isEditing && canEdit && (inputValue.trim().length > 0 || hasUnsavedChanges) ? (
-                          // Edit mode with save/cancel buttons (only if editing is allowed)
-                          <View style={style.buttonContainer}>
-                            <View style={style.buttonRow}>
-                              {existingMemory && (
-                                <TouchableOpacity
-                                  style={[style.button, style.cancelButton]}
-                                  onPress={handleCancel}
-                                  activeOpacity={0.8}
-                                  accessibilityLabel="Cancel editing"
-                                  accessibilityRole="button"
-                                >
-                                  <Text style={[style.buttonText, style.cancelButtonText]}>Cancel</Text>
-                                </TouchableOpacity>
-                              )}
-                              <TouchableOpacity
-                                style={[style.button, memoryLoading && style.buttonDisabled]}
-                                onPress={handleSubmit}
-                                activeOpacity={0.8}
-                                disabled={memoryLoading}
-                                accessibilityLabel="Save memory"
-                                accessibilityHint="Save your written memory to the database"
-                                accessibilityRole="button"
-                              >
-                                <Text style={style.buttonText}>
-                                  {memoryLoading ? "Saving..." : "Save Memory"}
-                                </Text>
-                              </TouchableOpacity>
-                            </View>
-                          </View>
- 
-                        ) : null}
-                        
-                        {/* Error message */}
-                        {memoryError && (
-                          <Text style={style.errorText}>{memoryError}</Text>
-                        )}
-                        
-                        {/* Week number at the bottom */}
-                        <Text style={style.weekNumberText}>
-                          Week {getWeekNumber(date)}
-                        </Text>
-                      </View>
-                    </>
-                  )}
-                </Animated.View>
-              </LinearGradient>
-            </View>
-          </View>
-        </View>
-      </View>
-    </SafeAreaView>
-  );
-};
+    <View style={newStyles.weekContainer}>
+      <View style={newStyles.weekDaysRow}>
+        {currentWeek.map((date, index) => {
+          const isToday = date.toDateString() === today.toDateString();
+          const isSelected = date.toDateString() === selectedDate.toDateString();
 
-// Week Overview Component
-const WeekOverview = ({ 
-  week, 
-  weekIndex, 
-  currentMonth, 
-  currentYear, 
-  hasMemoryForDate 
-}: {
-  week: Date[];
-  weekIndex: number;
-  currentMonth: number;
-  currentYear: number;
-  hasMemoryForDate: (date: Date) => boolean;
-}) => {
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const today = new Date();
-  
-  return (
-    <View style={style.weekOverviewContainer}>
-      <Text style={style.weekTitle}>
-        Week {weekIndex + 1}
-      </Text>
-      <View style={style.weekDaysGrid}>
-        {week.map((date, index) => {
-          const hasMemory = hasMemoryForDate(date);
-          const isToday = date.getDate() === today.getDate() &&
-                         date.getMonth() === today.getMonth() &&
-                         date.getFullYear() === today.getFullYear();
-          
           return (
-            <View 
-              key={index} 
+            <TouchableOpacity
+              key={index}
               style={[
-                style.dayItem,
-                hasMemory && style.dayItemWithMemory
+                newStyles.dayContainer,
+                isSelected && newStyles.selectedDayContainer,
+                isToday && isEditingUnlocked && newStyles.unlockedDayContainer,
               ]}
-            >
-              <Text style={[
-                style.dayNumber,
-                hasMemory && style.dayNumberWithMemory,
-                isToday && { color: '#4A90E2', fontWeight: '800' }
-              ]}>
+              onPress={() => handleDatePress(date)}
+              onLongPress={() => handleDateLongPress(date)}
+              activeOpacity={0.7}>
+              <Text
+                style={[
+                  newStyles.dayNumber,
+                  isToday && newStyles.todayNumber,
+                  isSelected && newStyles.selectedDayNumber,
+                  isToday && isEditingUnlocked && newStyles.unlockedDayNumber,
+                ]}>
                 {date.getDate()}
               </Text>
-              <Text style={style.dayName}>
-                {dayNames[date.getDay()]}
+              <Text
+                style={[
+                  newStyles.dayName,
+                  isToday && newStyles.todayName,
+                  isSelected && newStyles.selectedDayName,
+                  isToday && isEditingUnlocked && newStyles.unlockedDayName,
+                ]}>
+                {dayNames[index]}
               </Text>
-              {hasMemory && <View style={style.memoryIndicator} />}
-            </View>
+            </TouchableOpacity>
           );
         })}
       </View>
@@ -572,320 +152,530 @@ const WeekOverview = ({
   );
 };
 
-const HomeScreen = () => {
-  const today = new Date();
-  const router = useRouter();
-  const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
-  const [currentDateIndex, setCurrentDateIndex] = useState(0);
-  const weekScrollViewRef = useRef<ScrollView | null>(null);
-  const dateScrollViewRef = useRef<ScrollView | null>(null);
-  const [monthWeeks, setMonthWeeks] = useState<Date[][]>([]);
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
-  const [currentYear, setCurrentYear] = useState(today.getFullYear());
-  const [initialScrollDone, setInitialScrollDone] = useState(false);
-  const [memoryDates, setMemoryDates] = useState<Set<string>>(new Set()); // Track dates with memories
-  const [fontsLoaded] = useFonts({
-    InstrumentSerif: require('assets/fonts/InstrumentSerif-Regular.ttf'),
-  });
+// Memory text area component
+const MemoryTextArea = ({
+  selectedDate,
+  isEditingUnlocked,
+}: {
+  selectedDate: Date;
+  isEditingUnlocked: boolean;
+}) => {
+  const [memoryText, setMemoryText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const { userId } = useAuth();
+  const { saveMemory, getMemoryByDate } = useMemory(userId || '');
 
-
-  const { userId, isLoaded } = useAuth();
-  
-  // Initialize memory hook with safe userId
-  const { getMemoriesForMonth } = useMemory(userId);
-
-  // Load memories for current month to show indicators
   useEffect(() => {
-    const loadMemoriesForMonth = async () => {
+    const loadMemoryForDate = async () => {
       if (!userId) return;
+
       try {
-        const memories = await getMemoriesForMonth(currentMonth, currentYear) as Memory[];
-        const dates = new Set(memories.map((memory: Memory) => 
-          new Date(memory.date).toDateString()
-        ));
-        setMemoryDates(dates);
+        const memory = await getMemoryByDate(selectedDate);
+        if (memory) {
+          setMemoryText(memory.memory);
+        } else {
+          setMemoryText('');
+        }
+        setHasUnsavedChanges(false);
       } catch (error) {
-        console.error('Failed to load memories for month:', error);
+        console.error('Failed to load memory for selected date:', error);
+        setMemoryText('');
       }
     };
 
-    if (currentMonth !== undefined && currentYear !== undefined && userId) {
-      loadMemoriesForMonth();
-    }
-  }, [currentMonth, currentYear, userId]);
+    loadMemoryForDate();
+  }, [userId, selectedDate, getMemoryByDate]);
 
-  if (!isLoaded) {
-    return <LoadingSpinner />;
-  }
-
-  const navigateToMonth = (monthOffset: number) => {
-    let newMonth = currentMonth + monthOffset;
-    let newYear = currentYear;
-    
-    if (newMonth < 0) {
-      newMonth = 11;
-      newYear -= 1;
-    } else if (newMonth > 11) {
-      newMonth = 0;
-      newYear += 1;
+  const handleTextChange = (text: string) => {
+    if (canEdit) {
+      setMemoryText(text);
+      setHasUnsavedChanges(true);
     }
-    
-    setCurrentMonth(newMonth);
-    setCurrentYear(newYear);
-    setInitialScrollDone(false); // Reset to trigger scroll to appropriate week
   };
 
-  const navigateToToday = () => {
-    const todayDate = new Date();
-    setCurrentMonth(todayDate.getMonth());
-    setCurrentYear(todayDate.getFullYear());
-    setInitialScrollDone(false); // Reset to trigger scroll to today
+  const handleSave = async () => {
+    if (!memoryText.trim() || !userId) return;
+
+    setIsLoading(true);
+    try {
+      const result = await saveMemory(selectedDate, memoryText);
+      if (result.success) {
+        setHasUnsavedChanges(false);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    } catch (error) {
+      console.error('Failed to save memory:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const today = new Date();
+  const isSelectedDateToday = selectedDate.toDateString() === today.toDateString();
+  const canEdit = isSelectedDateToday && isEditingUnlocked;
+
+  const getPlaceholder = () => {
+    if (isSelectedDateToday) {
+      return isEditingUnlocked
+        ? "What's on you mind today, alway remember that no matter what tomorrow is going to be great"
+        : "Long press on today's date to unlock editing";
+    } else {
+      return `Memory from ${selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`;
+    }
+  };
+
+  return (
+    <View style={newStyles.memoryContainer}>
+      <View
+        style={[newStyles.memoryTextContainer, !canEdit && newStyles.memoryTextContainerReadOnly]}>
+        <TextInput
+          key={`${selectedDate.toDateString()}-${isEditingUnlocked}`}
+          style={[newStyles.memoryTextInput, !canEdit && newStyles.memoryTextInputReadOnly]}
+          multiline
+          placeholder={getPlaceholder()}
+          placeholderTextColor={canEdit ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.3)'}
+          value={memoryText}
+          onChangeText={handleTextChange}
+          textAlignVertical="top"
+          autoCorrect={true}
+          spellCheck={true}
+          editable={canEdit}
+          selectTextOnFocus={canEdit}
+          pointerEvents={canEdit ? 'auto' : 'none'}
+        />
+        {/* {!canEdit && memoryText === '' && (
+          <View style={newStyles.emptyStateContainer}>
+            <Text style={newStyles.emptyStateText}>
+              {isSelectedDateToday ? '🔒 Tap and hold today to unlock editing' : '📖 View only'}
+            </Text>
+          </View>
+        )} */}
+      </View>
+
+      {hasUnsavedChanges && canEdit && (
+        <TouchableOpacity
+          style={newStyles.saveButton}
+          onPress={handleSave}
+          disabled={isLoading}
+          activeOpacity={0.8}>
+          <Text style={newStyles.saveButtonText}>{isLoading ? 'Saving...' : 'Save Memory'}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+};
+
+// Hamburger menu component
+const HamburgerMenu = ({ isVisible, onClose }: { isVisible: boolean; onClose: () => void }) => {
+  const router = useRouter();
 
   const navigateToReflection = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onClose();
     router.push('/reflection');
   };
 
   const navigateToSettings = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onClose();
     router.push('/settings');
   };
 
-  const hasMemoryForDate = (date: Date): boolean => {
-    return memoryDates.has(date.toDateString());
+  const handleOverlayPress = () => {
+    onClose();
   };
 
-  useEffect(() => {
-    generateMonthWeeks(currentMonth, currentYear);
-  }, [currentMonth, currentYear]);
+  if (!isVisible) return null;
 
-  useEffect(() => {
-    if (monthWeeks.length > 0 && !initialScrollDone) {
-      const todayDate = new Date();
+  return (
+    <View style={newStyles.modalOverlay}>
+      <TouchableOpacity
+        style={newStyles.modalBackdrop}
+        activeOpacity={1}
+        onPress={handleOverlayPress}
+      />
+      <View style={newStyles.modalContainer}>
+        {Platform.OS === 'ios' ? (
+          <BlurView intensity={100} tint="dark" style={newStyles.modalContent}>
+            <View style={newStyles.menuItems}>
+              <TouchableOpacity
+                style={newStyles.menuItem}
+                onPress={navigateToReflection}
+                activeOpacity={0.8}>
+                <Text style={newStyles.menuItemIcon}>🧠</Text>
+                <Text style={newStyles.menuItemText}>Reflection</Text>
+              </TouchableOpacity>
 
-      const weekIndex = monthWeeks.findIndex((week) =>
-        week.some(
-          (date) =>
-            date.getDate() === todayDate.getDate() &&
-            date.getMonth() === todayDate.getMonth() &&
-            date.getFullYear() === todayDate.getFullYear()
-        )
-      );
+              <View style={newStyles.menuDivider} />
 
-      const dateIndex =
-        weekIndex !== -1
-          ? monthWeeks[weekIndex].findIndex(
-            (date) =>
-              date.getDate() === todayDate.getDate() &&
-              date.getMonth() === todayDate.getMonth() &&
-              date.getFullYear() === todayDate.getFullYear()
-          )
-          
-          : 0;
+              <TouchableOpacity
+                style={newStyles.menuItem}
+                onPress={navigateToSettings}
+                activeOpacity={0.8}>
+                <Text style={newStyles.menuItemIcon}>⚙️</Text>
+                <Text style={newStyles.menuItemText}>Settings</Text>
+              </TouchableOpacity>
+            </View>
+          </BlurView>
+        ) : (
+          <View style={newStyles.modalContentFallback}>
+            <View style={newStyles.menuItems}>
+              <TouchableOpacity
+                style={newStyles.menuItem}
+                onPress={navigateToReflection}
+                activeOpacity={0.8}>
+                <Text style={newStyles.menuItemIcon}>🧠</Text>
+                <Text style={newStyles.menuItemText}>Reflection</Text>
+              </TouchableOpacity>
 
-      if (weekIndex !== -1) {
-        weekScrollViewRef.current?.scrollTo({
-          y: weekIndex * Dimensions.get('window').height,
-          animated: true,
-        });
-        setCurrentWeekIndex(weekIndex);
+              <View style={newStyles.menuDivider} />
 
-        if (dateIndex !== -1) {
-          setTimeout(() => {
-            dateScrollViewRef.current?.scrollTo({
-              x: dateIndex * width,
-              animated: true,
-            });
-            setCurrentDateIndex(dateIndex);
-          }, 100);
-        }
-      }
-      setInitialScrollDone(true);
-    }
-  }, [monthWeeks, initialScrollDone]);
+              <TouchableOpacity
+                style={newStyles.menuItem}
+                onPress={navigateToSettings}
+                activeOpacity={0.8}>
+                <Text style={newStyles.menuItemIcon}>⚙️</Text>
+                <Text style={newStyles.menuItemText}>Settings</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+};
 
-  const generateMonthWeeks = (month: number, year: number) => {
-    const firstDayOfMonth = new Date(year, month, 1);
-    const lastDayOfMonth = new Date(year, month + 1, 0);
-    const weeks: Date[][] = [];
-    let currentWeek: Date[] = [];
+// Hamburger icon component
+const HamburgerIcon = ({ onPress }: { onPress: () => void }) => {
+  return (
+    <TouchableOpacity style={newStyles.hamburgerContainer} onPress={onPress} activeOpacity={0.8}>
+      <View style={newStyles.hamburgerLine} />
+    </TouchableOpacity>
+  );
+};
 
-    for (let i = firstDayOfMonth.getDay() - 1; i >= 0; i--) {
-      const date = new Date(year, month, -i);
-      currentWeek.push(date);
-    }
+// Main home screen component
+const HomeScreen = () => {
+  const { userId, isLoaded } = useAuth();
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isEditingUnlocked, setIsEditingUnlocked] = useState(false);
+  const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const [fontsLoaded, fontError] = useFonts({
+    InstrumentSerif: require('../../assets/fonts/InstrumentSerif-Regular.ttf'),
+  });
 
-    for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
-      const date = new Date(year, month, day);
-      currentWeek.push(date);
+  if (!isLoaded || !fontsLoaded) {
+    return <LoadingSpinner />;
+  }
 
-      if (currentWeek.length === 7) {
-        weeks.push(currentWeek);
-        currentWeek = [];
-      }
-    }
+  if (fontError) {
+    console.error('Font loading error:', fontError);
+    // Optionally, return a view with an error message
+  }
 
-    if (currentWeek.length > 0) {
-      const daysToAdd = 7 - currentWeek.length;
-      for (let i = 1; i <= daysToAdd; i++) {
-        const date = new Date(year, month + 1, i);
-        currentWeek.push(date);
-      }
-      weeks.push(currentWeek);
-    }
-
-    setMonthWeeks(weeks);
-  };
-
-  const triggerHaptic = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
-  };
-
-  const handleDateScroll = (event: {
-    nativeEvent: { contentOffset: { x: number } };
-  }) => {
-    const scrollPosition = event.nativeEvent.contentOffset.x;
-    const index = Math.round(scrollPosition / width);
-    if (index !== currentDateIndex) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setCurrentDateIndex(index);
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    // Lock editing when switching to a different date
+    const today = new Date();
+    if (date.toDateString() !== today.toDateString()) {
+      setIsEditingUnlocked(false);
     }
   };
 
-  const handleWeekScroll = (event: any) => {
-    const offsetY = event.nativeEvent.contentOffset.y;
-    const newIndex = Math.round(offsetY / Dimensions.get('window').height);
-
-    if (newIndex !== currentWeekIndex) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setCurrentWeekIndex(newIndex);
-    }
+  const handleUnlockEditing = () => {
+    setIsEditingUnlocked(true);
   };
 
-  // Gesture handlers
-  const panGesture = Gesture.Pan()
-    .onEnd((event) => {
-      if (event.velocityY > 1000) {
-        // Fast swipe down to go to week view
-        router.push('/week');
-      }
-    });
-
-  // Navigation handlers
-  const handlePreviousMonth = () => {
-    navigateToMonth(-1);
+  const handleMenuPress = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsMenuVisible(true);
   };
 
-  const handleNextMonth = () => {
-    navigateToMonth(1);
-  };
-
-  const handleToday = () => {
-    navigateToToday();
+  const handleMenuClose = () => {
+    setIsMenuVisible(false);
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#0c0c0c' }}>
-      <LinearGradient
-        colors={[
-          '#B6C874',
-          '#D9BA72',
-          '#6FD9E5',
-          '#0c0c0c',
-          '#0c0c0c',
-          '#0c0c0c',
-        ]}
-        style={style.container}
-      >
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <StatusBar style="light" />
-          
-          <GestureDetector gesture={panGesture}>
-            <ScrollView
-              ref={weekScrollViewRef}
-              pagingEnabled
-              showsVerticalScrollIndicator={false}
-              onMomentumScrollEnd={handleWeekScroll}
-              snapToInterval={Dimensions.get('window').height} // Remove header height offset
-              decelerationRate="fast"
-              contentContainerStyle={{
-                flexGrow: 1,
-                paddingBottom: 120, // Add padding for floating navigation
-              }}
-            >
-            {monthWeeks.map((week, weekIndex) => (
-              <View
-                key={weekIndex}
-                style={{
-                  width: '100%',
-                  height: Dimensions.get('window').height, // Remove header height offset
-                }}
-              >
-                {/* Week Overview */}
-                <WeekOverview
-                  week={week}
-                  weekIndex={weekIndex}
-                  currentMonth={currentMonth}
-                  currentYear={currentYear}
-                  hasMemoryForDate={hasMemoryForDate}
-                />
-                
-                <ScrollView
-                  ref={dateScrollViewRef}
-                  horizontal
-                  pagingEnabled
-                  nestedScrollEnabled={true}
-                  showsHorizontalScrollIndicator={false}
-                  onMomentumScrollEnd={handleDateScroll}
-                  snapToInterval={width}
-                  decelerationRate="fast"
-                  contentContainerStyle={{
-                    flexGrow: 1,
-                  }}
-                >
-                  {week.map((date, dateIndex) => (
-                    <View
-                      key={dateIndex}
-                      style={{
-                        width: Dimensions.get('window').width,
-                        height: Dimensions.get('window').height - 80, // Remove additional header offset
-                      }}
-                    >
-                      <DatePage
-                        date={date}
-                        isToday={
-                          date.getDate() === today.getDate() &&
-                          date.getMonth() === today.getMonth() &&
-                          date.getFullYear() === today.getFullYear()
-                        }
-                        hasMemory={hasMemoryForDate(date)}
-                      />
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-            ))}
-          </ScrollView>
-          </GestureDetector>
-          
-          {/* Floating Bottom Navigation */}
-          <FloatingBottomNavigation
-            currentMonth={currentMonth}
-            currentYear={currentYear}
-            onPreviousMonth={handlePreviousMonth}
-            onNextMonth={handleNextMonth}
-            onToday={handleToday}
-            onReflection={navigateToReflection}
-            onSettings={navigateToSettings}
-          />
+    <SafeAreaView style={newStyles.container}>
+      <StatusBar style="light" />
+      <View style={newStyles.content}>
+        <TimeBasedGreeting />
+        <WeekCalendar
+          selectedDate={selectedDate}
+          onDateSelect={handleDateSelect}
+          isEditingUnlocked={isEditingUnlocked}
+          onUnlockEditing={handleUnlockEditing}
+        />
+        <MemoryTextArea selectedDate={selectedDate} isEditingUnlocked={isEditingUnlocked} />
+      </View>
 
-        </GestureHandlerRootView>
-      </LinearGradient>
+      <HamburgerIcon onPress={handleMenuPress} />
+      <HamburgerMenu isVisible={isMenuVisible} onClose={handleMenuClose} />
     </SafeAreaView>
   );
 };
+
+// New styles for the redesigned home screen
+const newStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0c0c0c',
+  },
+  gradient: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 120,
+  },
+
+  // Greeting styles
+  greetingContainer: {
+    marginBottom: 40,
+  },
+  greetingText: {
+    fontSize: 48,
+    fontWeight: '300',
+    color: '#FFFFFF',
+    fontFamily: 'InstrumentSerif',
+    letterSpacing: -2,
+  },
+
+  // Week calendar styles
+  weekContainer: {
+    marginBottom: 40,
+  },
+  weekDaysRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dayContainer: {
+    alignItems: 'center',
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 12,
+    minHeight: 60,
+    justifyContent: 'center',
+  },
+  selectedDayContainer: {
+    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 53, 0.3)',
+  },
+  unlockedDayContainer: {
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  dayNumber: {
+    fontSize: 36,
+    fontWeight: '300',
+    color: '#FFFFFF',
+
+    marginBottom: 4,
+  },
+  todayNumber: {
+    color: '#FF6B35', // Orange color for today
+    fontWeight: '600',
+  },
+  dayName: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  todayName: {
+    color: '#FF6B35', // Orange color for today
+    fontWeight: '600',
+  },
+  selectedDayNumber: {
+    color: '#FF6B35',
+    fontWeight: '600',
+  },
+  selectedDayName: {
+    color: '#FF6B35',
+    fontWeight: '600',
+  },
+  unlockedDayNumber: {
+    color: '#22C55E',
+    fontWeight: '600',
+  },
+  unlockedDayName: {
+    color: '#22C55E',
+    fontWeight: '600',
+  },
+  lockIcon: {
+    fontSize: 10,
+    marginTop: 2,
+    opacity: 0.6,
+  },
+  unlockIcon: {
+    fontSize: 10,
+    marginTop: 2,
+    opacity: 0.8,
+  },
+
+  // Memory text area styles
+  memoryContainer: {
+    flex: 1,
+    marginBottom: 20,
+  },
+  memoryTextContainer: {
+    flex: 1,
+    backgroundColor: '#0c0c0c',
+    borderRadius: 20,
+    padding: 20,
+  },
+  memoryTextInput: {
+    flex: 1,
+    fontSize: 24,
+    color: '#FFFFFF',
+    fontFamily: 'InstrumentSerif',
+    lineHeight: 28,
+    textAlignVertical: 'top',
+    backgroundColor: '#0c0c0c',
+    padding: 10,
+  },
+  memoryTextContainerReadOnly: {
+    opacity: 0.7,
+  },
+  memoryTextInputReadOnly: {
+    opacity: 0.8,
+  },
+  emptyStateContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    transform: [{ translateY: -10 }],
+  },
+  emptyStateText: {
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontSize: 16,
+    fontFamily: 'InstrumentSerif',
+    textAlign: 'center',
+  },
+  saveButton: {
+    backgroundColor: '#FF6B35',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    alignItems: 'center',
+    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'InstrumentSerif',
+  },
+
+  // Hamburger menu styles
+  hamburgerContainer: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 40 : 60,
+    left: 36,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  hamburgerLine: {
+    width: 48,
+    height: 12,
+    backgroundColor: '#FFFFFF',
+    marginVertical: 2,
+    borderRadius: 100,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+  },
+  modalContainer: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 100 : 80,
+    left: 24,
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(12, 12, 12, 0.4)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    minWidth: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalContentFallback: {
+    backgroundColor: 'rgba(12, 12, 12, 0.95)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    minWidth: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  menuItems: {
+    padding: 16,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+  },
+  menuItemIcon: {
+    fontSize: 24,
+    marginRight: 16,
+  },
+  menuItemText: {
+    fontSize: 18,
+    color: '#FFFFFF',
+    fontFamily: 'InstrumentSerif',
+    fontWeight: '400',
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginVertical: 8,
+  },
+});
 
 export default HomeScreen;
