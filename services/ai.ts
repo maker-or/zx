@@ -37,7 +37,7 @@ export class AIService {
           'X-Title': 'Daily Memory Journal',
         },
         body: JSON.stringify({
-          model: 'anthropic/claude-3-haiku', // Fast and good for this use case
+          model: 'sarvamai/sarvam-m:free', // Fast and good for this use case
           messages: [
             {
               role: 'system',

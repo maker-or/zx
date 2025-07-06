@@ -11,6 +11,11 @@ export interface Memory {
   date: string;
   memory: string;
   magic: string | null;
+  mood?: string | null;
+  prompt?: string | null;
+  wordCount?: number | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export class MemoryService {
@@ -23,10 +28,18 @@ export class MemoryService {
   /**
    * Save a new memory or update existing one
    */
-  async saveMemory(userID: string, date: Date, memoryText: string): Promise<void> {
+  async saveMemory(
+    userID: string, 
+    date: Date, 
+    memoryText: string, 
+    mood?: string, 
+    prompt?: string
+  ): Promise<void> {
     const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD format
     const month = date.getMonth() + 1;
     const year = date.getFullYear();
+    const wordCount = memoryText.trim().split(/\s+/).length;
+    const now = new Date().toISOString();
 
     // Check if memory already exists for this date
     const existingMemory = await this.getMemoryByDate(userID, date);
@@ -37,6 +50,10 @@ export class MemoryService {
         .update(usersTable)
         .set({
           memory: memoryText,
+          mood,
+          prompt,
+          wordCount,
+          updatedAt: now,
         })
         .where(
           and(
@@ -53,6 +70,11 @@ export class MemoryService {
         date: dateString,
         memory: memoryText,
         magic: null,
+        mood,
+        prompt,
+        wordCount,
+        createdAt: now,
+        updatedAt: now,
       });
     }
   }

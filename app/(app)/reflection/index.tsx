@@ -2,14 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useReflection } from '../../hooks/useReflection';
-import { ReflectionTrigger } from '../../services/reflection';
+import { useReflection } from '../../../hooks/useReflection';
+import { ReflectionTrigger } from '../../../services/reflection';
 import * as Haptics from 'expo-haptics';
+
+import { useAuth } from '@clerk/clerk-expo';
 
 export default function ReflectionHomeScreen() {
   const router = useRouter();
-  const userID = 'default-user'; // Replace with actual user ID from auth
+  const { userId } = useAuth();
   const openRouterApiKey = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
+  
+  // Safe back navigation function
+  const handleSafeBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(app)');
+    }
+  };
   
   const { 
     pendingTriggers, 
@@ -18,7 +29,7 @@ export default function ReflectionHomeScreen() {
     loadPendingTriggers,
     createReflectionTriggers,
     getUserReflections
-  } = useReflection(userID, openRouterApiKey);
+  } = useReflection(userId || '', openRouterApiKey);
 
   const [userReflections, setUserReflections] = useState<any[]>([]);
 
@@ -41,7 +52,7 @@ export default function ReflectionHomeScreen() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     const params = {
-      userID,
+      userID: userId,
       year: trigger.year.toString(),
       ...(trigger.weekNumber && { weekNumber: trigger.weekNumber.toString() }),
       ...(trigger.month && { month: trigger.month.toString() }),
@@ -62,7 +73,7 @@ export default function ReflectionHomeScreen() {
     const currentMonth = currentDate.getMonth() + 1;
 
     const params = {
-      userID,
+      userID: userId,
       year: currentYear.toString(),
       ...(type === 'weekly' && { weekNumber: currentWeek.toString() }),
       ...(type === 'monthly' && { month: currentMonth.toString() }),
@@ -118,7 +129,7 @@ export default function ReflectionHomeScreen() {
             <Text style={styles.errorText}>
               Please configure your OpenRouter API key in the environment variables to use AI reflections.
             </Text>
-            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <TouchableOpacity style={styles.backButton} onPress={handleSafeBack}>
               <Text style={styles.backButtonText}>Go Back</Text>
             </TouchableOpacity>
           </View>
@@ -136,7 +147,7 @@ export default function ReflectionHomeScreen() {
           
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <TouchableOpacity onPress={handleSafeBack} style={styles.backBtn}>
               <Text style={styles.backBtnText}>← Back</Text>
             </TouchableOpacity>
             <Text style={styles.title}>AI Reflections</Text>

@@ -2,76 +2,87 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, SafeAreaView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { AIStoryDisplay } from '../../../components/AIStoryDisplay';
-import { useReflection } from '../../../hooks/useReflection';
-import { Reflection } from '../../../services/reflection';
+import { MemorySelector } from '../../../../components/MemorySelector'
+import { AIStoryDisplay } from '../../../../components/AIStoryDisplay';
+import { useReflection } from '../../../../hooks/useReflection'
+import { Memory } from '../../../../services/memory';
+import { Reflection } from '../../../../services/reflection';
 import * as Haptics from 'expo-haptics';
 
-interface MonthlyReflectionOption {
-  selection: any;
-  reflection: Reflection | null;
-}
+import { useAuth } from '@clerk/clerk-expo';
 
-export default function YearlyReflectionScreen() {
+export default function WeeklyReflectionScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { userId } = useAuth();
+
+  // Safe back navigation function
+  const handleSafeBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(app)/reflection');
+    }
+  };
+
+    if(userId === null || userId === undefined){
+    console.error("no userId");
+  }
   
   // Get parameters from route
+  const weekNumber = parseInt(params.weekNumber as string);
   const year = parseInt(params.year as string);
-  const userID = params.userID as string || 'default-user';
   
   // Get OpenRouter API key from environment
   const openRouterApiKey = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
   
   // Hooks
   const { 
-    getYearlyReflectionOptions, 
-    createYearlyReflection, 
+    getWeekMemories, 
+    createWeeklyReflection, 
     loading, 
     error 
-  } = useReflection(userID, openRouterApiKey);
+  } = useReflection(userId || '', openRouterApiKey || '');
 
   // State
-  const [monthlyOptions, setMonthlyOptions] = useState<MonthlyReflectionOption[]>([]);
+  const [weekMemories, setWeekMemories] = useState<Memory[]>([]);
   const [currentStep, setCurrentStep] = useState<'loading' | 'selection' | 'story_type' | 'story_display'>('loading');
-  const [selectedReflectionId, setSelectedReflectionId] = useState<string | null>(null);
+  const [selectedMemoryId, setSelectedMemoryId] = useState<string | null>(null);
   const [storyType, setStoryType] = useState<'therapeutic' | 'inspirational' | null>(null);
   const [generatedReflection, setGeneratedReflection] = useState<Reflection | null>(null);
 
   useEffect(() => {
-    loadYearlyOptions();
-  }, [year]);
+    loadWeekMemories();
+  }, [weekNumber, year]);
 
-  const loadYearlyOptions = async () => {
+  const loadWeekMemories = async () => {
     try {
-      const options = await getYearlyReflectionOptions(year);
-      // Filter out options with null reflections
-      const validOptions = options.filter((option: any) => option.reflection !== null) as MonthlyReflectionOption[];
-      setMonthlyOptions(validOptions);
+      const memories = await getWeekMemories(weekNumber, year);
+      setWeekMemories(memories);
       
-      if (validOptions.length === 0) {
+      if (memories.length === 0) {
         Alert.alert(
-          'No Monthly Reflections Found',
-          'You need to complete at least one monthly reflection in this year before creating a yearly reflection.',
-          [{ text: 'OK', onPress: () => router.back() }]
+          'No Memories Found',
+          'There are no memories for this week to reflect on.',
+          [{ text: 'OK', onPress: handleSafeBack }]
         );
         return;
       }
       
       setCurrentStep('selection');
     } catch (err) {
-      console.error('Failed to load yearly options:', err);
+      console.error('Failed to load week memories:', err);
       Alert.alert(
         'Error',
-        'Failed to load monthly reflections for this year.',
-        [{ text: 'OK', onPress: () => router.back() }]
+        'Failed to load memories for this week.',
+        [{ text: 'OK', onPress: handleSafeBack }]
       );
     }
   };
 
-  const handleReflectionSelect = async (reflectionId: string) => {
+  const handleMemorySelect = async (memoryId: string) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setSelectedReflectionId(reflectionId);
+    setSelectedMemoryId(memoryId);
     setCurrentStep('story_type');
   };
 
@@ -79,12 +90,13 @@ export default function YearlyReflectionScreen() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setStoryType(type);
     
-    if (!selectedReflectionId) return;
+    if (!selectedMemoryId) return;
     
     try {
-      const reflection = await createYearlyReflection(
+      const reflection = await createWeeklyReflection(
+        weekNumber,
         year,
-        selectedReflectionId,
+        selectedMemoryId,
         type
       );
       
@@ -94,10 +106,10 @@ export default function YearlyReflectionScreen() {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (err) {
-      console.error('Failed to create yearly reflection:', err);
+      console.error('Failed to create reflection:', err);
       Alert.alert(
         'Error',
-        'Failed to generate your yearly reflection story. Please try again.',
+        'Failed to generate your reflection story. Please try again.',
         [{ text: 'OK' }]
       );
     }
@@ -108,40 +120,30 @@ export default function YearlyReflectionScreen() {
     
     if (currentStep === 'story_type') {
       setCurrentStep('selection');
-      setSelectedReflectionId(null);
+      setSelectedMemoryId(null);
     } else if (currentStep === 'selection') {
-      router.back();
+      handleSafeBack();
     }
   };
 
   const handleStoryClose = () => {
-    router.back();
+    handleSafeBack();
   };
 
   const handleStorySave = () => {
     // Story is automatically saved when created, this is just UI feedback
-    console.log('Yearly reflection story already saved to database');
+    console.log('Story already saved to database');
   };
 
-  const getMonthName = (monthNumber: number) => {
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    return months[monthNumber - 1];
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'long',
-      year: 'numeric',
-    });
-  };
-
-  const getStoryPreview = (text: string, maxLength: number = 120) => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
+  const getWeekDateRange = () => {
+    const startDate = new Date(year, 0, 1 + (weekNumber - 1) * 7);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 6);
+    
+    return {
+      start: startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      end: endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    };
   };
 
   if (!openRouterApiKey) {
@@ -153,7 +155,7 @@ export default function YearlyReflectionScreen() {
             <Text style={styles.errorText}>
               Please configure your OpenRouter API key in the environment variables to use AI reflections.
             </Text>
-            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <TouchableOpacity style={styles.backButton} onPress={handleSafeBack}>
               <Text style={styles.backButtonText}>Go Back</Text>
             </TouchableOpacity>
           </View>
@@ -167,7 +169,7 @@ export default function YearlyReflectionScreen() {
       <SafeAreaView style={styles.container}>
         <LinearGradient colors={['#667eea', '#764ba2']} style={styles.gradient}>
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading monthly reflections...</Text>
+            <Text style={styles.loadingText}>Loading memories...</Text>
           </View>
         </LinearGradient>
       </SafeAreaView>
@@ -184,52 +186,21 @@ export default function YearlyReflectionScreen() {
     );
   }
 
+  const dateRange = getWeekDateRange();
+
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient colors={['#667eea', '#764ba2']} style={styles.gradient}>
         
         {currentStep === 'selection' && (
-          <View style={styles.selectionContainer}>
-            <View style={styles.header}>
-              <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                <Text style={styles.backBtnText}>← Back</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.content}>
-              <Text style={styles.title}>Yearly Reflection</Text>
-              <Text style={styles.subtitle}>
-                Choose one of your monthly reflections from {year} that defines your growth and transformation this year.
-              </Text>
-
-              <View style={styles.optionsList}>
-                {monthlyOptions.map((option, index) => (
-                  <TouchableOpacity
-                    key={option.reflection!.id}
-                    style={styles.reflectionOption}
-                    onPress={() => handleReflectionSelect(option.reflection!.id)}
-                  >
-                    <View style={styles.reflectionHeader}>
-                      <Text style={styles.reflectionTitle}>
-                        {getMonthName((option.selection?.month || index + 1))} Reflection
-                      </Text>
-                      <Text style={styles.reflectionDate}>
-                        {formatDate(option.reflection!.createdAt)}
-                      </Text>
-                    </View>
-                    <View style={styles.reflectionType}>
-                      <Text style={styles.reflectionTypeText}>
-                        {option.reflection!.storyType === 'therapeutic' ? '🌱 Therapeutic' : '✨ Inspirational'}
-                      </Text>
-                    </View>
-                    <Text style={styles.reflectionPreview}>
-                      {getStoryPreview(option.reflection!.aiStory)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </View>
+          <MemorySelector
+            memories={weekMemories}
+            title="Weekly Reflection"
+            subtitle={`Choose a memory from week ${weekNumber} (${dateRange.start} - ${dateRange.end}) that still haunts you - one that feels emotionally significant and worth reflecting on.`}
+            onSelect={handleMemorySelect}
+            onCancel={handleSafeBack}
+            loading={loading}
+          />
         )}
 
         {currentStep === 'story_type' && (
@@ -243,7 +214,7 @@ export default function YearlyReflectionScreen() {
             <View style={styles.storyTypeContent}>
               <Text style={styles.storyTypeTitle}>Choose Your Story Type</Text>
               <Text style={styles.storyTypeSubtitle}>
-                How would you like to explore your year of transformation?
+                How would you like to reframe this memory?
               </Text>
 
               <TouchableOpacity
@@ -251,10 +222,10 @@ export default function YearlyReflectionScreen() {
                 onPress={() => handleStoryTypeSelect('therapeutic')}
                 disabled={loading}
               >
-                <Text style={styles.storyTypeOptionTitle}>🌱 Life Transformation</Text>
+                <Text style={styles.storyTypeOptionTitle}>🌱 Therapeutic Reframing</Text>
                 <Text style={styles.storyTypeOptionDesc}>
-                  Explore the profound healing and growth patterns from your entire year.
-                  A deep, therapeutic perspective on your journey.
+                  Transform this memory into a story of healing and growth. 
+                  Focus on lessons learned and strength gained.
                 </Text>
               </TouchableOpacity>
 
@@ -263,17 +234,17 @@ export default function YearlyReflectionScreen() {
                 onPress={() => handleStoryTypeSelect('inspirational')}
                 disabled={loading}
               >
-                <Text style={styles.storyTypeOptionTitle}>✨ Legacy of Strength</Text>
+                <Text style={styles.storyTypeOptionTitle}>✨ Inspirational Journey</Text>
                 <Text style={styles.storyTypeOptionDesc}>
-                  Transform this year's journey into a powerful manifesto of your
-                  resilience, wisdom, and the incredible person you've become.
+                  Turn this memory into an empowering narrative about your 
+                  resilience and the courage you've shown.
                 </Text>
               </TouchableOpacity>
 
               {loading && (
                 <View style={styles.generatingContainer}>
                   <Text style={styles.generatingText}>
-                    Generating your yearly reflection story...
+                    Generating your personalized reflection story...
                   </Text>
                 </View>
               )}
@@ -340,7 +311,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  selectionContainer: {
+  storyTypeContainer: {
     flex: 1,
   },
   header: {
@@ -354,64 +325,6 @@ const styles = StyleSheet.create({
   backBtnText: {
     color: 'white',
     fontSize: 16,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
-    marginBottom: 30,
-    lineHeight: 22,
-  },
-  optionsList: {
-    flex: 1,
-  },
-  reflectionOption: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-  },
-  reflectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  reflectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  reflectionDate: {
-    fontSize: 14,
-    color: '#666',
-  },
-  reflectionType: {
-    marginBottom: 12,
-  },
-  reflectionTypeText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  reflectionPreview: {
-    fontSize: 14,
-    color: '#555',
-    lineHeight: 20,
-  },
-  storyTypeContainer: {
-    flex: 1,
   },
   storyTypeContent: {
     flex: 1,

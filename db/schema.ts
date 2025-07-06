@@ -1,4 +1,3 @@
-import { year } from "drizzle-orm/mysql-core";
 import { int, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { v4 as uuidv4 } from "uuid";
 
@@ -10,6 +9,11 @@ export const usersTable = sqliteTable("users_table", {
   date: text("date").notNull(),
   memory: text("memory").notNull(),
   magic: text("magic"),
+  mood: text("mood"), // "amazing", "good", "okay", "bad", "terrible"
+  prompt: text("prompt"), // Daily prompt used (if any)
+  wordCount: int("wordCount"), // For analytics
+  createdAt: text("createdAt").notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text("updatedAt").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 // Reflections table for storing AI-generated stories
@@ -59,4 +63,34 @@ export const reflectionTriggersTable = sqliteTable("reflection_triggers", {
   weekNumber: int("weekNumber"),
   month: int("month"),
   year: int("year").notNull(),
+});
+
+// Tags table for memory categorization
+export const tagsTable = sqliteTable("tags", {
+  id: text("id").primaryKey().$defaultFn(() => uuidv4()),
+  userID: text("userID").notNull(),
+  name: text("name").notNull(),
+  color: text("color").notNull(), // Hex color code
+  createdAt: text("createdAt").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+// Memory tags junction table
+export const memoryTagsTable = sqliteTable("memory_tags", {
+  id: text("id").primaryKey().$defaultFn(() => uuidv4()),
+  memoryId: text("memoryId").notNull(),
+  tagId: text("tagId").notNull(),
+  createdAt: text("createdAt").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+// Analytics table for tracking patterns
+export const analyticsTable = sqliteTable("analytics", {
+  id: text("id").primaryKey().$defaultFn(() => uuidv4()),
+  userID: text("userID").notNull(),
+  date: text("date").notNull(),
+  memoryCount: int("memoryCount").notNull().default(0),
+  totalWordCount: int("totalWordCount").notNull().default(0),
+  averageMood: text("averageMood"), // Most common mood for the day
+  reflectionCount: int("reflectionCount").notNull().default(0),
+  streakDays: int("streakDays").notNull().default(0),
+  createdAt: text("createdAt").notNull().$defaultFn(() => new Date().toISOString()),
 });

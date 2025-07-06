@@ -5,18 +5,17 @@ import { useReflection } from '../hooks/useReflection';
 import { ReflectionTrigger } from '../services/reflection';
 import * as Haptics from 'expo-haptics';
 
+import { useAuth } from '@clerk/clerk-expo';
+
 interface ReflectionNotificationProps {
-  userID: string;
   openRouterApiKey?: string;
 }
 
-export const ReflectionNotification: React.FC<ReflectionNotificationProps> = ({
-  userID,
-  openRouterApiKey
-}) => {
+export const ReflectionNotification: React.FC<ReflectionNotificationProps> = ({ openRouterApiKey }) => {
   const router = useRouter();
   const [fadeAnim] = useState(new Animated.Value(0));
   const [isVisible, setIsVisible] = useState(false);
+  const { userId } = useAuth();
   
   const { 
     pendingTriggers, 

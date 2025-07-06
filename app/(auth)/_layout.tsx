@@ -27,7 +27,8 @@ export default function AuthRoutesLayout() {
   }
 
   if (isSignedIn) {
-    return <Redirect href={'/'} />
+    console.log('User is signed in, redirecting to app...');
+    return <Redirect href={'/(app)'} />
   }
 
   return <Stack screenOptions={{ headerShown: false }} />

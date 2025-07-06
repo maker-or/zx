@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
 import { MemoryService, Memory } from '../services/memory';
 
-export const useMemory = (userID: string = 'default-user') => {
+export const useMemory = (userID: string) => {
   const db = useSQLiteContext();
   const [memoryService] = useState(() => new MemoryService(db));
   const [loading, setLoading] = useState(false);
@@ -26,7 +26,12 @@ export const useMemory = (userID: string = 'default-user') => {
     return isToday(date);
   };
 
-  const saveMemory = async (date: Date, memoryText: string): Promise<{ success: boolean; message?: string }> => {
+  const saveMemory = async (
+    date: Date, 
+    memoryText: string, 
+    mood?: string, 
+    prompt?: string
+  ): Promise<{ success: boolean; message?: string }> => {
     if (!memoryText.trim()) {
       setError('Memory cannot be empty');
       return { success: false, message: 'Memory cannot be empty' };
@@ -43,7 +48,7 @@ export const useMemory = (userID: string = 'default-user') => {
     setError(null);
 
     try {
-      await memoryService.saveMemory(userID, date, memoryText.trim());
+      await memoryService.saveMemory(userID, date, memoryText.trim(), mood, prompt);
       setLoading(false);
       return { success: true };
     } catch (err) {

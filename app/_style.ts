@@ -1,6 +1,7 @@
 import {
   StyleSheet,
   Dimensions,
+  Platform,
 } from 'react-native';
 
 
@@ -327,9 +328,9 @@ in:{
   },
   reflectionButton: {
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#667eea',
-    borderRadius: 16,
+    paddingVertical: 12,
+    backgroundColor: '#242424',
+    borderRadius: 60,
     marginLeft: 8,
   },
   reflectionButtonText: {
@@ -434,5 +435,55 @@ in:{
     fontSize: 12,
     textAlign: 'center',
     fontFamily: 'InstrumentSerif',
+  },
+  settingsButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  settingsButtonText: {
+    fontSize: 18,
+  },
+
+  // Floating Navigation Styles
+  floatingNavContainer: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 40 : 20,
+    left: 16,
+    right: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  floatingNavBlur: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(12, 12, 12, 0.4)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  floatingNavFallback: {
+    backgroundColor: 'rgba(12, 12, 12, 0.9)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  floatingNavContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    height: 70,
   },
 });

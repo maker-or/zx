@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
 import { ReflectionService, Reflection, ReflectionTrigger } from '../services/reflection';
 
-export const useReflection = (userID: string = 'default-user', openRouterApiKey?: string) => {
+export const useReflection = (userID: string, openRouterApiKey?: string) => {
   const db = useSQLiteContext();
   const [reflectionService] = useState(() => {
     if (!openRouterApiKey) {

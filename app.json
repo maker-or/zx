@@ -4,7 +4,10 @@
     "slug": "my-expo-app",
     "scheme": "my-expo-app",
     "version": "1.0.0",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "experiments": {
       "tsconfigPaths": true
     },
@@ -17,7 +20,9 @@
           ]
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-web-browser",
+      "expo-router"
     ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -40,6 +45,12 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.anonymous.myexpoapp"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0ec5a9d3-a074-43b7-9df3-0b3198655c4a"
+      }
+    },
+    "owner": "maker-or"
   }
 }
