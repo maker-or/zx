@@ -306,7 +306,6 @@ const HamburgerMenu = ({ isVisible, onClose }: { isVisible: boolean; onClose: ()
                 style={newStyles.menuItem}
                 onPress={navigateToReflection}
                 activeOpacity={0.8}>
-                <Text style={newStyles.menuItemIcon}>🧠</Text>
                 <Text style={newStyles.menuItemText}>Reflection</Text>
               </TouchableOpacity>
 
@@ -316,7 +315,6 @@ const HamburgerMenu = ({ isVisible, onClose }: { isVisible: boolean; onClose: ()
                 style={newStyles.menuItem}
                 onPress={navigateToSettings}
                 activeOpacity={0.8}>
-                <Text style={newStyles.menuItemIcon}>⚙️</Text>
                 <Text style={newStyles.menuItemText}>Settings</Text>
               </TouchableOpacity>
             </View>
@@ -328,7 +326,6 @@ const HamburgerMenu = ({ isVisible, onClose }: { isVisible: boolean; onClose: ()
                 style={newStyles.menuItem}
                 onPress={navigateToReflection}
                 activeOpacity={0.8}>
-                <Text style={newStyles.menuItemIcon}>🧠</Text>
                 <Text style={newStyles.menuItemText}>Reflection</Text>
               </TouchableOpacity>
 
@@ -338,7 +335,6 @@ const HamburgerMenu = ({ isVisible, onClose }: { isVisible: boolean; onClose: ()
                 style={newStyles.menuItem}
                 onPress={navigateToSettings}
                 activeOpacity={0.8}>
-                <Text style={newStyles.menuItemIcon}>⚙️</Text>
                 <Text style={newStyles.menuItemText}>Settings</Text>
               </TouchableOpacity>
             </View>
@@ -615,7 +611,7 @@ const newStyles = StyleSheet.create({
   },
   modalContainer: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 100 : 80,
+    bottom: Platform.OS === 'ios' ? 100 : 100,
     left: 24,
   },
   modalBackdrop: {
@@ -652,28 +648,26 @@ const newStyles = StyleSheet.create({
     elevation: 10,
   },
   menuItems: {
-    padding: 16,
+    padding: 10,
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 20,
     paddingHorizontal: 12,
     borderRadius: 12,
   },
-  menuItemIcon: {
-    fontSize: 24,
-    marginRight: 16,
-  },
+
   menuItemText: {
     fontSize: 18,
-    color: '#FFFFFF',
-    fontFamily: 'InstrumentSerif',
+    color: '#0c0c0c',
     fontWeight: '400',
   },
   menuDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    height: 2,
+    backgroundColor: '#C9C6C6',
     marginVertical: 8,
   },
 });

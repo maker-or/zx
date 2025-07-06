@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+  Alert,
+  Platform,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useReflection } from '../../../hooks/useReflection';
 import { ReflectionTrigger } from '../../../services/reflection';
@@ -12,7 +22,7 @@ export default function ReflectionHomeScreen() {
   const router = useRouter();
   const { userId } = useAuth();
   const openRouterApiKey = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
-  
+
   // Safe back navigation function
   const handleSafeBack = () => {
     if (router.canGoBack()) {
@@ -21,14 +31,14 @@ export default function ReflectionHomeScreen() {
       router.replace('/(app)');
     }
   };
-  
-  const { 
-    pendingTriggers, 
-    loading, 
-    error, 
+
+  const {
+    pendingTriggers,
+    loading,
+    error,
     loadPendingTriggers,
     createReflectionTriggers,
-    getUserReflections
+    getUserReflections,
   } = useReflection(userId || '', openRouterApiKey);
 
   const [userReflections, setUserReflections] = useState<any[]>([]);
@@ -48,9 +58,12 @@ export default function ReflectionHomeScreen() {
     }
   };
 
-  const handleStartReflection = async (type: 'weekly' | 'monthly' | 'yearly', trigger: ReflectionTrigger) => {
+  const handleStartReflection = async (
+    type: 'weekly' | 'monthly' | 'yearly',
+    trigger: ReflectionTrigger
+  ) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
+
     const params = {
       userID: userId,
       year: trigger.year.toString(),
@@ -66,10 +79,12 @@ export default function ReflectionHomeScreen() {
 
   const handleManualReflection = async (type: 'weekly' | 'monthly' | 'yearly') => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
-    const currentWeek = Math.ceil(((currentDate.getTime() - new Date(currentYear, 0, 1).getTime()) / 86400000) / 7);
+    const currentWeek = Math.ceil(
+      (currentDate.getTime() - new Date(currentYear, 0, 1).getTime()) / 86400000 / 7
+    );
     const currentMonth = currentDate.getMonth() + 1;
 
     const params = {
@@ -92,7 +107,7 @@ export default function ReflectionHomeScreen() {
       yearly: 0,
     };
 
-    userReflections.forEach(reflection => {
+    userReflections.forEach((reflection) => {
       counts[reflection.type as keyof typeof counts]++;
     });
 
@@ -114,8 +129,18 @@ export default function ReflectionHomeScreen() {
 
   const getMonthName = (monthNumber: number) => {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return months[monthNumber - 1];
   };
@@ -123,17 +148,17 @@ export default function ReflectionHomeScreen() {
   if (!openRouterApiKey) {
     return (
       <SafeAreaView style={styles.container}>
-        <LinearGradient colors={['#667eea', '#764ba2']} style={styles.gradient}>
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorTitle}>Configuration Required</Text>
-            <Text style={styles.errorText}>
-              Please configure your OpenRouter API key in the environment variables to use AI reflections.
-            </Text>
-            <TouchableOpacity style={styles.backButton} onPress={handleSafeBack}>
-              <Text style={styles.backButtonText}>Go Back</Text>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
+        <StatusBar style="light" />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>Configuration Required</Text>
+          <Text style={styles.errorText}>
+            Please configure your OpenRouter API key in the environment variables to use AI
+            reflections.
+          </Text>
+          <TouchableOpacity style={styles.backButton} onPress={handleSafeBack}>
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
@@ -142,131 +167,106 @@ export default function ReflectionHomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.gradient}>
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-          
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={handleSafeBack} style={styles.backBtn}>
-              <Text style={styles.backBtnText}>← Back</Text>
-            </TouchableOpacity>
-            <Text style={styles.title}>AI Reflections</Text>
-            <Text style={styles.subtitle}>
-              Transform your memories into stories of growth and healing
-            </Text>
-          </View>
-
-          {/* Pending Reflections */}
-          {pendingTriggers.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Ready for Reflection</Text>
-              {pendingTriggers.map((trigger, index) => (
-                <TouchableOpacity
-                  key={`${trigger.type}-${trigger.year}-${trigger.weekNumber}-${trigger.month}`}
-                  style={styles.pendingReflectionCard}
-                  onPress={() => handleStartReflection(trigger.type, trigger)}
-                >
-                  <View style={styles.pendingReflectionContent}>
-                    <Text style={styles.pendingReflectionType}>
-                      {trigger.type === 'weekly' && '🌱 Weekly'}
-                      {trigger.type === 'monthly' && '✨ Monthly'}
-                      {trigger.type === 'yearly' && '🌟 Yearly'}
-                    </Text>
-                    <Text style={styles.pendingReflectionText}>
-                      {formatTriggerText(trigger)}
-                    </Text>
-                    <Text style={styles.pendingReflectionDesc}>
-                      {trigger.type === 'weekly' && 'Select a haunting memory for therapeutic reframing'}
-                      {trigger.type === 'monthly' && 'Choose from your weekly reflections for deeper insight'}
-                      {trigger.type === 'yearly' && 'Pick your most meaningful monthly reflection'}
-                    </Text>
-                  </View>
-                  <Text style={styles.pendingReflectionArrow}>→</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          {/* Manual Reflections */}
+      <StatusBar style="light" />
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Pending Reflections */}
+        {pendingTriggers.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Create New Reflection</Text>
-            
-            <TouchableOpacity
-              style={styles.manualReflectionCard}
-              onPress={() => handleManualReflection('weekly')}
-            >
-              <View style={styles.manualReflectionContent}>
-                <Text style={styles.manualReflectionType}>🌱 Weekly Reflection</Text>
-                <Text style={styles.manualReflectionDesc}>
-                  Choose a haunting memory from this week for therapeutic reframing
-                </Text>
-                <Text style={styles.manualReflectionCount}>
-                  {reflectionCounts.weekly} completed
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.manualReflectionCard}
-              onPress={() => handleManualReflection('monthly')}
-            >
-              <View style={styles.manualReflectionContent}>
-                <Text style={styles.manualReflectionType}>✨ Monthly Reflection</Text>
-                <Text style={styles.manualReflectionDesc}>
-                  Select from your weekly reflections for deeper insights
-                </Text>
-                <Text style={styles.manualReflectionCount}>
-                  {reflectionCounts.monthly} completed
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.manualReflectionCard}
-              onPress={() => handleManualReflection('yearly')}
-            >
-              <View style={styles.manualReflectionContent}>
-                <Text style={styles.manualReflectionType}>🌟 Yearly Reflection</Text>
-                <Text style={styles.manualReflectionDesc}>
-                  Choose your most meaningful monthly reflection of the year
-                </Text>
-                <Text style={styles.manualReflectionCount}>
-                  {reflectionCounts.yearly} completed
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* Past Reflections Preview */}
-          {userReflections.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Recent Reflections</Text>
-              {userReflections.slice(0, 3).map((reflection, index) => (
-                <View key={reflection.id} style={styles.pastReflectionCard}>
-                  <Text style={styles.pastReflectionType}>
-                    {reflection.type === 'weekly' && '🌱 Weekly'}
-                    {reflection.type === 'monthly' && '✨ Monthly'}
-                    {reflection.type === 'yearly' && '🌟 Yearly'}
+            <Text style={styles.sectionTitle}>Ready for Reflection</Text>
+            {pendingTriggers.map((trigger, index) => (
+              <TouchableOpacity
+                key={`${trigger.type}-${trigger.year}-${trigger.weekNumber}-${trigger.month}`}
+                style={styles.pendingReflectionCard}
+                onPress={() => handleStartReflection(trigger.type, trigger)}>
+                <View style={styles.pendingReflectionContent}>
+                  <Text style={styles.pendingReflectionType}>
+                    {trigger.type === 'weekly' && '🌱 Weekly'}
+                    {trigger.type === 'monthly' && '✨ Monthly'}
+                    {trigger.type === 'yearly' && '🌟 Yearly'}
                   </Text>
-                  <Text style={styles.pastReflectionDate}>
-                    {new Date(reflection.createdAt).toLocaleDateString()}
-                  </Text>
-                  <Text style={styles.pastReflectionPreview}>
-                    {reflection.aiStory.substring(0, 100)}...
+                  <Text style={styles.pendingReflectionText}>{formatTriggerText(trigger)}</Text>
+                  <Text style={styles.pendingReflectionDesc}>
+                    {trigger.type === 'weekly' &&
+                      'Select a haunting memory for therapeutic reframing'}
+                    {trigger.type === 'monthly' &&
+                      'Choose from your weekly reflections for deeper insight'}
+                    {trigger.type === 'yearly' && 'Pick your most meaningful monthly reflection'}
                   </Text>
                 </View>
-              ))}
-            </View>
-          )}
+                <Text style={styles.pendingReflectionArrow}>→</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
+        {/* Manual Reflections */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Reflection</Text>
+          <TouchableOpacity
+            style={styles.manualReflectionCard}
+            onPress={() => handleManualReflection('weekly')}>
+            <View style={styles.manualReflectionContent}>
+              <Text style={styles.manualReflectionType}>Weekly Reflection</Text>
+              <Text style={styles.manualReflectionDesc}>
+                Choose a haunting memory from this week for therapeutic reframing
+              </Text>
+              <Text style={styles.manualReflectionCount}>{reflectionCounts.weekly} completed</Text>
             </View>
-          )}
+          </TouchableOpacity>
 
-        </ScrollView>
-      </LinearGradient>
+          <TouchableOpacity
+            style={styles.manualReflectionCard}
+            onPress={() => handleManualReflection('monthly')}>
+            <View style={styles.manualReflectionContent}>
+              <Text style={styles.manualReflectionType}>Monthly Reflection</Text>
+              <Text style={styles.manualReflectionDesc}>
+                Select from your weekly reflections for deeper insights
+              </Text>
+              <Text style={styles.manualReflectionCount}>{reflectionCounts.monthly} completed</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.manualReflectionCard}
+            onPress={() => handleManualReflection('yearly')}>
+            <View style={styles.manualReflectionContent}>
+              <Text style={styles.manualReflectionType}>Yearly Reflection</Text>
+              <Text style={styles.manualReflectionDesc}>
+                Choose your most meaningful monthly reflection of the year
+              </Text>
+              <Text style={styles.manualReflectionCount}>{reflectionCounts.yearly} completed</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Past Reflections Preview */}
+        {userReflections.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Recent Reflections</Text>
+            {userReflections.slice(0, 3).map((reflection, index) => (
+              <View key={reflection.id} style={styles.pastReflectionCard}>
+                <Text style={styles.pastReflectionType}>
+                  {reflection.type === 'weekly' && '🌱 Weekly'}
+                  {reflection.type === 'monthly' && '✨ Monthly'}
+                  {reflection.type === 'yearly' && '🌟 Yearly'}
+                </Text>
+                <Text style={styles.pastReflectionDate}>
+                  {new Date(reflection.createdAt).toLocaleDateString()}
+                </Text>
+                <Text style={styles.pastReflectionPreview}>
+                  {reflection.aiStory.substring(0, 100)}...
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -274,6 +274,8 @@ export default function ReflectionHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#121212',
+    paddingTop: Platform.OS === 'android' ? 25 : 0,
   },
   gradient: {
     flex: 1,
@@ -282,6 +284,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    paddingTop: Platform.OS === 'ios' ? 60 : 80,
     paddingBottom: 40,
   },
   header: {
@@ -358,7 +361,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   manualReflectionCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    backgroundColor: '#FFFBFB',
     borderRadius: 16,
     padding: 20,
     marginBottom: 12,

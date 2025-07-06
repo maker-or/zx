@@ -11,17 +11,18 @@ interface ReflectionNotificationProps {
   openRouterApiKey?: string;
 }
 
-export const ReflectionNotification: React.FC<ReflectionNotificationProps> = ({ openRouterApiKey }) => {
+export const ReflectionNotification: React.FC<ReflectionNotificationProps> = ({
+  openRouterApiKey,
+}) => {
   const router = useRouter();
   const [fadeAnim] = useState(new Animated.Value(0));
   const [isVisible, setIsVisible] = useState(false);
   const { userId } = useAuth();
-  
-  const { 
-    pendingTriggers, 
-    loadPendingTriggers,
-    createReflectionTriggers
-  } = useReflection(userID, openRouterApiKey);
+
+  const { pendingTriggers, loadPendingTriggers, createReflectionTriggers } = useReflection(
+    userId,
+    openRouterApiKey
+  );
 
   useEffect(() => {
     checkForPendingReflections();
@@ -74,9 +75,9 @@ export const ReflectionNotification: React.FC<ReflectionNotificationProps> = ({ 
   };
 
   const getNotificationText = () => {
-    const weeklyCount = pendingTriggers.filter(t => t.type === 'weekly').length;
-    const monthlyCount = pendingTriggers.filter(t => t.type === 'monthly').length;
-    const yearlyCount = pendingTriggers.filter(t => t.type === 'yearly').length;
+    const weeklyCount = pendingTriggers.filter((t) => t.type === 'weekly').length;
+    const monthlyCount = pendingTriggers.filter((t) => t.type === 'monthly').length;
+    const yearlyCount = pendingTriggers.filter((t) => t.type === 'yearly').length;
 
     if (yearlyCount > 0) {
       return 'Your yearly reflection is ready! 🌟';
@@ -85,7 +86,7 @@ export const ReflectionNotification: React.FC<ReflectionNotificationProps> = ({ 
     } else if (weeklyCount > 0) {
       return 'Your weekly reflection awaits 🌱';
     }
-    
+
     return 'Reflection ready';
   };
 
@@ -98,21 +99,13 @@ export const ReflectionNotification: React.FC<ReflectionNotificationProps> = ({ 
       <View style={styles.notification}>
         <View style={styles.content}>
           <Text style={styles.text}>{getNotificationText()}</Text>
-          <Text style={styles.subtext}>
-            Transform your memories into stories of growth
-          </Text>
+          <Text style={styles.subtext}>Transform your memories into stories of growth</Text>
         </View>
         <View style={styles.actions}>
-          <TouchableOpacity 
-            style={styles.dismissButton}
-            onPress={handleDismiss}
-          >
+          <TouchableOpacity style={styles.dismissButton} onPress={handleDismiss}>
             <Text style={styles.dismissText}>Later</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.startButton}
-            onPress={handleStartReflection}
-          >
+          <TouchableOpacity style={styles.startButton} onPress={handleStartReflection}>
             <Text style={styles.startText}>Start</Text>
           </TouchableOpacity>
         </View>
