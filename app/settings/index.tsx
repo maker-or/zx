@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../contexts/ThemeContext';
 import { LoadingSpinner } from '../../components/UIComponents';
@@ -19,6 +20,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { theme, themeMode, setThemeMode, toggleTheme, isDark } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
+  const insets = useSafeAreaInsets();
 
   // Safe back navigation function
   const handleSafeBack = () => {
@@ -37,15 +39,13 @@ export default function SettingsScreen() {
   const handleDataExport = async () => {
     setIsLoading(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
+
     // Simulate export process
     setTimeout(() => {
       setIsLoading(false);
-      Alert.alert(
-        'Export Complete',
-        'Your memories have been exported successfully.',
-        [{ text: 'OK', onPress: () => {} }]
-      );
+      Alert.alert('Export Complete', 'Your memories have been exported successfully.', [
+        { text: 'OK', onPress: () => {} },
+      ]);
     }, 2000);
   };
 
@@ -68,12 +68,12 @@ export default function SettingsScreen() {
     );
   };
 
-  const SettingItem = ({ 
-    title, 
-    subtitle, 
-    onPress, 
+  const SettingItem = ({
+    title,
+    subtitle,
+    onPress,
     rightComponent,
-    showChevron = false 
+    showChevron = false,
   }: {
     title: string;
     subtitle?: string;
@@ -84,20 +84,17 @@ export default function SettingsScreen() {
     <TouchableOpacity
       style={[
         styles.settingItem,
-        { 
+        {
           backgroundColor: theme.colors.surface,
           borderColor: theme.colors.border,
-        }
+        },
       ]}
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole="button"
-      accessibilityLabel={title}
-    >
+      accessibilityLabel={title}>
       <View style={styles.settingContent}>
-        <Text style={[styles.settingTitle, { color: theme.colors.text }]}>
-          {title}
-        </Text>
+        <Text style={[styles.settingTitle, { color: theme.colors.text }]}>{title}</Text>
         {subtitle && (
           <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>
             {subtitle}
@@ -106,9 +103,7 @@ export default function SettingsScreen() {
       </View>
       {rightComponent}
       {showChevron && (
-        <Text style={[styles.chevron, { color: theme.colors.textSecondary }]}>
-          ›
-        </Text>
+        <Text style={[styles.chevron, { color: theme.colors.textSecondary }]}>›</Text>
       )}
     </TouchableOpacity>
   );
@@ -123,20 +118,20 @@ export default function SettingsScreen() {
             {
               backgroundColor: themeMode === mode ? theme.colors.primary : theme.colors.surface,
               borderColor: theme.colors.border,
-            }
+            },
           ]}
           onPress={() => handleThemeChange(mode)}
           accessibilityRole="radio"
           accessibilityState={{ checked: themeMode === mode }}
-          accessibilityLabel={`${mode} theme`}
-        >
-          <Text style={[
-            styles.themeOptionText,
-            { 
-              color: themeMode === mode ? theme.colors.button.text : theme.colors.text,
-              fontWeight: themeMode === mode ? '600' : 'normal',
-            }
-          ]}>
+          accessibilityLabel={`${mode} theme`}>
+          <Text
+            style={[
+              styles.themeOptionText,
+              {
+                color: themeMode === mode ? theme.colors.button.text : theme.colors.text,
+                fontWeight: themeMode === mode ? '600' : 'normal',
+              },
+            ]}>
             {mode.charAt(0).toUpperCase() + mode.slice(1)}
           </Text>
         </TouchableOpacity>
@@ -145,47 +140,25 @@ export default function SettingsScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <LinearGradient
-        colors={[theme.colors.gradient.start, theme.colors.gradient.end]}
-        style={styles.container}
-      >
-        <View style={styles.header}>
+      <LinearGradient colors={['#0c0c0c', '#0c0c0c']} style={styles.container}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
           <TouchableOpacity
             style={[styles.backButton, { backgroundColor: theme.colors.surface }]}
             onPress={handleSafeBack}
             accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <Text style={[styles.backButtonText, { color: theme.colors.text }]}>
-              ‹
-            </Text>
+            accessibilityLabel="Go back">
+            <Text style={[styles.backButtonText, { color: theme.colors.text }]}>‹</Text>
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-            Settings
-          </Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Settings</Text>
           <View style={styles.placeholder} />
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              Appearance
-            </Text>
-            
-            <SettingItem
-              title="Theme"
-              subtitle="Choose your preferred app theme"
-              rightComponent={<ThemeSelector />}
-            />
-          </View>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Data & Privacy</Text>
 
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              Data & Privacy
-            </Text>
-            
             <SettingItem
               title="Export Data"
               subtitle="Download all your memories and reflections"
@@ -194,32 +167,23 @@ export default function SettingsScreen() {
                 isLoading ? (
                   <LoadingSpinner size="small" />
                 ) : (
-                  <Text style={[styles.exportIcon, { color: theme.colors.textSecondary }]}>
-                    📁
-                  </Text>
+                  <Text style={[styles.exportIcon, { color: theme.colors.textSecondary }]}> </Text>
                 )
               }
               showChevron={!isLoading}
             />
-            
+
             <SettingItem
               title="Clear All Data"
               subtitle="Permanently delete all memories and reflections"
               onPress={handleDataClear}
-              rightComponent={
-                <Text style={[styles.dangerIcon, { color: theme.colors.error }]}>
-                  🗑️
-                </Text>
-              }
               showChevron
             />
           </View>
 
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              About
-            </Text>
-            
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>About</Text>
+
             <SettingItem
               title="Version"
               subtitle="1.0.0"
@@ -229,12 +193,15 @@ export default function SettingsScreen() {
                 </Text>
               }
             />
-            
+
             <SettingItem
               title="Privacy Policy"
               subtitle="Learn how we protect your data"
               onPress={() => {
-                Alert.alert('Privacy Policy', 'Your privacy is important to us. All your data is stored locally on your device and never shared with third parties.');
+                Alert.alert(
+                  'Privacy Policy',
+                  'Your privacy is important to us. All your data is stored locally on your device and never shared with third parties.'
+                );
               }}
               showChevron
             />
@@ -257,7 +224,6 @@ const styles = {
     justifyContent: 'space-between' as const,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingTop: 16,
   },
   backButton: {
     width: 40,
