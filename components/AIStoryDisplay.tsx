@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
+  Dimensions,
+  Platform,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Reflection } from '../services/reflection';
 import * as Haptics from 'expo-haptics';
 
@@ -15,9 +26,10 @@ export const AIStoryDisplay: React.FC<AIStoryDisplayProps> = ({
   reflection,
   onClose,
   onSave,
-  showSaveOption = true
+  showSaveOption = true,
 }) => {
   const [saved, setSaved] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -25,24 +37,31 @@ export const AIStoryDisplay: React.FC<AIStoryDisplayProps> = ({
       weekday: 'long',
       month: 'long',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
     });
   };
 
   const getReflectionTypeDisplay = (type: string) => {
     switch (type) {
-      case 'weekly': return 'Weekly Reflection';
-      case 'monthly': return 'Monthly Reflection';
-      case 'yearly': return 'Yearly Reflection';
-      default: return 'Reflection';
+      case 'weekly':
+        return 'Weekly Reflection';
+      case 'monthly':
+        return 'Monthly Reflection';
+      case 'yearly':
+        return 'Yearly Reflection';
+      default:
+        return 'Reflection';
     }
   };
 
   const getStoryTypeDisplay = (type: string) => {
     switch (type) {
-      case 'therapeutic': return 'Therapeutic Story';
-      case 'inspirational': return 'Inspirational Story';
-      default: return 'AI Story';
+      case 'therapeutic':
+        return 'Therapeutic Story';
+      case 'inspirational':
+        return 'Inspirational Story';
+      default:
+        return 'AI Story';
     }
   };
 
@@ -64,55 +83,38 @@ export const AIStoryDisplay: React.FC<AIStoryDisplayProps> = ({
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={['#667eea', '#764ba2']}
-        style={styles.gradient}
-      >
-        <View style={styles.header}>
+      <StatusBar style="light" />
+      <LinearGradient colors={['#0c0c0c', '#0c0c0c']} style={styles.gradient}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
           <View style={styles.headerInfo}>
-            <Text style={styles.reflectionType}>
-              {getReflectionTypeDisplay(reflection.type)}
-            </Text>
-            <Text style={styles.storyType}>
-              {getStoryTypeDisplay(reflection.storyType)}
-            </Text>
-            <Text style={styles.date}>
-              {formatDate(reflection.createdAt)}
-            </Text>
+            <Text style={styles.reflectionType}>{getReflectionTypeDisplay(reflection.type)}</Text>
           </View>
-          <TouchableOpacity 
-            style={styles.closeButton}
-            onPress={handleClose}
-          >
+          <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
             <Text style={styles.closeButtonText}>×</Text>
           </TouchableOpacity>
         </View>
 
-        <ScrollView 
+        <ScrollView
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
+          showsVerticalScrollIndicator={false}>
           <View style={styles.storyContainer}>
             <View style={styles.storyMeta}>
               <Text style={styles.wordCount}>
                 {wordCount} words • {readingTime} min read
               </Text>
             </View>
-            
-            <Text style={styles.storyText}>
-              {reflection.aiStory}
-            </Text>
+
+            <Text style={styles.storyText}>{reflection.aiStory}</Text>
           </View>
         </ScrollView>
 
         {showSaveOption && (
-          <View style={styles.footer}>
-            <TouchableOpacity 
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 34) }]}>
+            <TouchableOpacity
               style={[styles.saveButton, saved && styles.savedButton]}
               onPress={handleSave}
-              disabled={saved}
-            >
+              disabled={saved}>
               <Text style={[styles.saveButtonText, saved && styles.savedButtonText]}>
                 {saved ? '✓ Saved to Journal' : 'Save to Journal'}
               </Text>
@@ -129,6 +131,7 @@ const { width, height } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#0c0c0c',
   },
   gradient: {
     flex: 1,
@@ -138,7 +141,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: 20,
-    paddingTop: 20,
     paddingBottom: 15,
   },
   headerInfo: {
@@ -220,7 +222,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   saveButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255,1)',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',

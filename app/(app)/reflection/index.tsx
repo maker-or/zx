@@ -14,13 +14,16 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useReflection } from '../../../hooks/useReflection';
 import { ReflectionTrigger } from '../../../services/reflection';
+import { quickReflectionDebug, createTestMemories } from '../../../utils/debugReflection';
 import * as Haptics from 'expo-haptics';
+import { useSQLiteContext } from 'expo-sqlite';
 
 import { useAuth } from '@clerk/clerk-expo';
 
 export default function ReflectionHomeScreen() {
   const router = useRouter();
   const { userId } = useAuth();
+  const db = useSQLiteContext();
   const openRouterApiKey = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
 
   // Safe back navigation function
@@ -42,6 +45,8 @@ export default function ReflectionHomeScreen() {
   } = useReflection(userId || '', openRouterApiKey);
 
   const [userReflections, setUserReflections] = useState<any[]>([]);
+  const [isDebugging, setIsDebugging] = useState(false);
+  const [debugResults, setDebugResults] = useState<string>('');
 
   useEffect(() => {
     loadData();
@@ -55,6 +60,68 @@ export default function ReflectionHomeScreen() {
       setUserReflections(reflections);
     } catch (err) {
       console.error('Failed to load reflection data:', err);
+    }
+  };
+
+  const handleDebugReflection = async () => {
+    if (!userId || !openRouterApiKey) {
+      Alert.alert('Error', 'Missing user ID or API key for debugging');
+      return;
+    }
+
+    setIsDebugging(true);
+    setDebugResults('');
+
+    try {
+      console.log('[DEBUG] Starting reflection system debug...');
+      await quickReflectionDebug(db, userId, openRouterApiKey);
+
+      Alert.alert(
+        'Debug Complete',
+        'Debug results have been logged to the console. Check your development console for detailed information.',
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('[ERROR] Debug failed:', error);
+      Alert.alert(
+        'Debug Failed',
+        `Debug test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsDebugging(false);
+    }
+  };
+
+  const handleCreateTestMemories = async () => {
+    if (!userId) {
+      Alert.alert('Error', 'Missing user ID for creating test memories');
+      return;
+    }
+
+    setIsDebugging(true);
+
+    try {
+      console.log('[DEBUG] Creating test memories...');
+      await createTestMemories(db, userId, 7);
+
+      Alert.alert(
+        'Test Memories Created',
+        'Successfully created 7 test memories for the past week. You can now test the reflection system.',
+        [{ text: 'OK' }]
+      );
+
+      // Refresh the data to show new memories
+      await loadData();
+    } catch (error) {
+      console.error('[ERROR] Failed to create test memories:', error);
+      Alert.alert(
+        'Failed to Create Test Memories',
+        `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsDebugging(false);
     }
   };
 
@@ -261,6 +328,41 @@ export default function ReflectionHomeScreen() {
           </View>
         )}
 
+        {/* Debug Section (only in development) */}
+        {__DEV__ && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Debug Tools</Text>
+            <TouchableOpacity
+              style={[styles.manualReflectionCard, styles.debugCard]}
+              onPress={handleDebugReflection}
+              disabled={isDebugging}>
+              <View style={styles.manualReflectionContent}>
+                <Text style={styles.manualReflectionType}>
+                  {isDebugging ? 'Running Debug...' : 'Debug Reflection System'}
+                </Text>
+                <Text style={styles.manualReflectionDesc}>
+                  Test all reflection system components including API connectivity, memory loading,
+                  and AI generation
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.manualReflectionCard, styles.debugCard]}
+              onPress={handleCreateTestMemories}
+              disabled={isDebugging}>
+              <View style={styles.manualReflectionContent}>
+                <Text style={styles.manualReflectionType}>
+                  {isDebugging ? 'Creating Memories...' : 'Create Test Memories'}
+                </Text>
+                <Text style={styles.manualReflectionDesc}>
+                  Create 7 test memories for the past week to test the reflection system
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
@@ -437,5 +539,10 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  debugCard: {
+    backgroundColor: '#2D2D2D',
+    borderWidth: 1,
+    borderColor: '#4A90E2',
   },
 });

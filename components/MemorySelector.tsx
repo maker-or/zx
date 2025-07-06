@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+  Platform,
+} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Memory } from '../services/memory';
 
 interface MemorySelectorProps {
@@ -17,9 +27,10 @@ export const MemorySelector: React.FC<MemorySelectorProps> = ({
   subtitle,
   onSelect,
   onCancel,
-  loading = false
+  loading = false,
 }) => {
   const [selectedMemoryId, setSelectedMemoryId] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -43,7 +54,8 @@ export const MemorySelector: React.FC<MemorySelectorProps> = ({
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+      <StatusBar style="light" />
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 24) }]}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
@@ -52,29 +64,23 @@ export const MemorySelector: React.FC<MemorySelectorProps> = ({
         {memories.map((memory) => (
           <TouchableOpacity
             key={memory.id}
-            style={[
-              styles.memoryCard,
-              selectedMemoryId === memory.id && styles.selectedMemoryCard
-            ]}
+            style={[styles.memoryCard, selectedMemoryId === memory.id && styles.selectedMemoryCard]}
             onPress={() => setSelectedMemoryId(memory.id)}
-            activeOpacity={0.7}
-          >
+            activeOpacity={0.7}>
             <View style={styles.memoryHeader}>
               <Text style={styles.memoryDate}>{formatDate(memory.date)}</Text>
-              <View style={[
-                styles.selectionIndicator,
-                selectedMemoryId === memory.id && styles.selectedIndicator
-              ]} />
+              <View
+                style={[
+                  styles.selectionIndicator,
+                  selectedMemoryId === memory.id && styles.selectedIndicator,
+                ]}
+              />
             </View>
-            
-            <Text style={styles.memoryText}>
-              {getMemoryPreview(memory.memory)}
-            </Text>
-            
+
+            <Text style={styles.memoryText}>{getMemoryPreview(memory.memory)}</Text>
+
             <View style={styles.memoryFooter}>
-              <Text style={styles.memoryStats}>
-                {memory.memory.split(/\s+/).length} words
-              </Text>
+              <Text style={styles.memoryStats}>{memory.memory.split(/\s+/).length} words</Text>
             </View>
           </TouchableOpacity>
         ))}
@@ -93,25 +99,24 @@ export const MemorySelector: React.FC<MemorySelectorProps> = ({
         <TouchableOpacity
           style={[styles.button, styles.cancelButton]}
           onPress={onCancel}
-          activeOpacity={0.8}
-        >
+          activeOpacity={0.8}>
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={[
             styles.button,
             styles.selectButton,
-            (!selectedMemoryId || loading) && styles.disabledButton
+            (!selectedMemoryId || loading) && styles.disabledButton,
           ]}
           onPress={handleSelect}
           disabled={!selectedMemoryId || loading}
-          activeOpacity={0.8}
-        >
-          <Text style={[
-            styles.selectButtonText,
-            (!selectedMemoryId || loading) && styles.disabledButtonText
-          ]}>
+          activeOpacity={0.8}>
+          <Text
+            style={[
+              styles.selectButtonText,
+              (!selectedMemoryId || loading) && styles.disabledButtonText,
+            ]}>
             {loading ? 'Generating...' : 'Continue'}
           </Text>
         </TouchableOpacity>
@@ -126,7 +131,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0c0c0c',
   },
   header: {
-    padding: 24,
+    paddingHorizontal: 24,
     paddingBottom: 16,
   },
   title: {
@@ -219,7 +224,9 @@ const styles = StyleSheet.create({
   },
   footer: {
     flexDirection: 'row',
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 24,
+    paddingTop: 24,
     gap: 12,
   },
   button: {
